@@ -1,0 +1,35 @@
+.navbar-body{
+    height: 70px;
+    border: 1px solid black;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: rgb(255, 187, 0);
+}
+
+.navbar-logo{
+
+    display: flex;
+    border: 1px solid red;
+    width:fit-content;
+    gap: 10px;
+
+    img{
+        height: 60px;
+    }
+
+    span{
+        font-size: 40px;
+    }
+}
+
+.navbar-menu{
+
+    display: flex;
+    border: 1px solid red;
+    width:fit-content;
+    gap: 20px;
+    padding: 10px;
+    font-size: 20px;
+
+}
