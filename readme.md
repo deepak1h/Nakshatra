@@ -1,70 +1,84 @@
-# Getting Started with Create React App
+# Nakshatra - Celestial Astrology Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+Nakshatra is a comprehensive full-stack astrology web application that combines traditional Vedic astrology with modern technology. The platform offers personalized Kundali (birth chart) readings, an e-commerce store for celestial products, and an AI-powered astrological chatbot. Built with a cosmic-themed design featuring deep blues, purples, and golds, the application provides users with spiritual guidance and astrological insights through multiple service channels.
 
-In the project directory, you can run:
+## User Preferences
 
-### `npm start`
+Preferred communication style: Simple, everyday language.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## System Architecture
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Frontend Architecture
+The client-side is built using **React with TypeScript** and employs a component-based architecture. The application uses **Vite** as the build tool and development server, providing fast hot module replacement and optimized builds. The UI framework is **shadcn/ui** with **Radix UI** primitives for accessible components, styled with **Tailwind CSS** for a cosmic-themed design system.
 
-### `npm test`
+**State Management**: The application uses React Context for global state (CartContext) and **TanStack Query (React Query)** for server state management, providing efficient data fetching, caching, and synchronization.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+**Routing**: Implemented with **Wouter**, a lightweight client-side routing solution that provides navigation without the overhead of larger routing libraries.
 
-### `npm run build`
+**Styling**: A comprehensive design system using CSS custom properties for theming, with cosmic color variables (cosmic-navy, cosmic-purple, cosmic-gold) and typography using Inter and Playfair Display fonts.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Backend Architecture
+The server-side follows a **REST API architecture** built with **Express.js and TypeScript**. The application uses a modular approach with separate files for routes, storage operations, and external service integrations.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+**API Structure**: RESTful endpoints organized by feature domains:
+- Products API (`/api/products`)
+- Orders API (`/api/orders`) 
+- Kundali requests (`/api/kundali`)
+- Chat functionality (`/api/chat`)
+- Contact forms (`/api/contact`)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+**Service Layer**: Dedicated service modules for AI integration (Gemini AI) and business logic separation from routing concerns.
 
-### `npm run eject`
+**Error Handling**: Centralized error handling middleware with proper HTTP status codes and structured error responses.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Data Storage Solutions
+**Database**: PostgreSQL with **Drizzle ORM** for type-safe database operations and schema management. The database is hosted on **Neon** (serverless PostgreSQL).
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+**Schema Design**: Well-structured relational database with tables for:
+- Users (authentication and profile data)
+- Products (e-commerce catalog)
+- Orders and OrderItems (transaction management)
+- KundaliRequests (astrology service orders)
+- ChatMessages (AI conversation history)
+- ContactMessages (customer inquiries)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+**Database Features**: Uses UUID primary keys, proper foreign key relationships, JSON fields for complex data (shipping addresses), and timestamp tracking for audit trails.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Authentication and Authorization
+The application architecture supports user authentication through a users table schema, though the specific authentication implementation (sessions, JWT, OAuth) is not explicitly defined in the current codebase. The system is designed to handle user-specific data and personalized experiences.
 
-## Learn More
+## External Dependencies
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### AI Integration
+**Google Gemini AI**: Integrated through `@google/genai` for the AstroAI chat feature. Provides personalized astrological guidance with a specialized system prompt that ensures responses are mystical, accurate, and empathetic while staying within astrological domain expertise.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Payment Processing
+**Stripe**: Full integration with `@stripe/stripe-js` and `@stripe/react-stripe-js` for secure payment processing of Kundali orders and product purchases.
 
-### Code Splitting
+**PayPal**: Alternative payment processing through `@paypal/paypal-server-sdk` for additional payment flexibility.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Database and Hosting
+**Neon Database**: Serverless PostgreSQL hosting with connection pooling through `@neondatabase/serverless`.
 
-### Analyzing the Bundle Size
+**Drizzle Kit**: Database migration and schema management tools for maintaining database structure.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Development and Build Tools
+**Vite**: Modern build tool with React plugin for development and production builds.
 
-### Making a Progressive Web App
+**Replit Integration**: Development environment integration with error overlays and cartographer plugin for Replit-specific features.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### UI and Styling
+**Radix UI**: Comprehensive set of accessible, unstyled UI primitives for building the component library.
 
-### Advanced Configuration
+**Tailwind CSS**: Utility-first CSS framework with custom theme configuration for the cosmic design system.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+**Lucide React**: Icon library providing consistent iconography throughout the application.
 
-### Deployment
+### Form and Data Management
+**React Hook Form**: Efficient form state management with validation through `@hookform/resolvers`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+**Zod**: Runtime type validation and schema validation for API endpoints and form data.
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+**TanStack Query**: Server state management with caching, background updates, and optimistic updates.

@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(222, 47%, 8%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 40%, 12%);
+  --card-foreground: hsl(210, 40%, 95%);
+  --popover: hsl(222, 40%, 12%);
+  --popover-foreground: hsl(210, 40%, 95%);
+  --primary: hsl(43, 96%, 56%);
+  --primary-foreground: hsl(222, 47%, 8%);
+  --secondary: hsl(262, 69%, 35%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(220, 21%, 21%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --accent: hsl(43, 96%, 56%);
+  --accent-foreground: hsl(222, 47%, 8%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217.2, 32.6%, 17.5%);
+  --input: hsl(217.2, 32.6%, 17.5%);
+  --ring: hsl(43, 96%, 56%);
+  --radius: 0.5rem;
+  --cosmic-navy: hsl(222, 47%, 8%);
+  --cosmic-purple: hsl(262, 69%, 35%);
+  --cosmic-gold: hsl(43, 96%, 56%);
+  --cosmic-silver: hsl(210, 16%, 93%);
+  --cosmic-grey: hsl(215, 16%, 24%);
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+  --font-mono: Menlo, monospace;
+}
+
+.dark {
+  --background: hsl(222, 47%, 8%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 40%, 12%);
+  --card-foreground: hsl(210, 40%, 95%);
+  --popover: hsl(222, 40%, 12%);
+  --popover-foreground: hsl(210, 40%, 95%);
+  --primary: hsl(43, 96%, 56%);
+  --primary-foreground: hsl(222, 47%, 8%);
+  --secondary: hsl(262, 69%, 35%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(220, 21%, 21%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --accent: hsl(43, 96%, 56%);
+  --accent-foreground: hsl(222, 47%, 8%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217.2, 32.6%, 17.5%);
+  --input: hsl(217.2, 32.6%, 17.5%);
+  --ring: hsl(43, 96%, 56%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+  }
+}
+
+@layer components {
+  .cosmic-glow {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+  
+  .star-pattern::before {
+    content: '✦';
+    color: var(--cosmic-gold);
+    margin-right: 0.5rem;
+  }
+  
+  .floating-nav {
+    backdrop-filter: blur(10px);
+    background: rgba(11, 20, 38, 0.9);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+  }
+  
+  .cosmic-border {
+    border-image: linear-gradient(45deg, var(--cosmic-gold), var(--cosmic-purple)) 1;
+  }
+  
+  .hero-cosmic {
+    background: radial-gradient(circle at 20% 50%, var(--cosmic-purple) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, var(--cosmic-navy) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, var(--cosmic-navy) 0%, transparent 50%);
+  }
+  
+  .cosmic-gradient {
+    background: linear-gradient(135deg, var(--cosmic-navy) 0%, var(--cosmic-purple) 50%, var(--cosmic-navy) 100%);
+  }
+  
+  .product-card {
+    transition: all 0.3s ease;
+  }
+  
+  .product-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .chat-message {
+    animation: fadeInUp 0.3s ease-out;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cosmic-navy);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cosmic-gold);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D97706;
+}
