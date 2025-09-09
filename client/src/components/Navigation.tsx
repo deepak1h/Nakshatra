@@ -9,7 +9,7 @@ import { Link } from "wouter";
 
 export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { cartItems, setIsCartOpen } = useCart();
+  const { cartItems } = useCart();
   const { user, isAuthenticated, logout, isLoading } = useAuth();
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -86,18 +86,16 @@ export default function Navigation() {
         </div>
         
         <div className="flex items-center space-x-4">
-          <button 
-            className="relative"
-            onClick={() => setIsCartOpen(true)}
-            data-testid="button-cart"
-          >
-            <ShoppingCart className="text-xl text-foreground hover:text-accent transition-colors" />
-            {cartItemCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                {cartItemCount}
-              </span>
-            )}
-          </button>
+          <Link href="/checkout">
+            <a className="relative" data-testid="button-cart">
+              <ShoppingCart className="text-xl text-foreground hover:text-accent transition-colors" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
+            </a>
+          </Link>
           {/* User Authentication */}
           {isLoading ? (
             <div className="w-8 h-8 animate-pulse bg-accent/20 rounded-full" />

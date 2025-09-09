@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +31,8 @@ const kundaliTypes = [
 
 export default function KundaliSection() {
   const { toast } = useToast();
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<KundaliFormData>({
     fullName: "",
     gender: "",
@@ -38,6 +42,7 @@ export default function KundaliSection() {
     fatherName: "",
     kundaliType: "",
   });
+  const [submittedKundali, setSubmittedKundali] = useState<any>(null);
 
   const selectedType = kundaliTypes.find(type => type.value === formData.kundaliType);
 
@@ -45,21 +50,12 @@ export default function KundaliSection() {
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/kundali", data);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Kundali Order Placed! 🌟",
-        description: "Your cosmic blueprint request has been received. You'll receive confirmation via email.",
+        title: "Kundali Details Submitted! 🌟",
+        description: "Your cosmic blueprint request has been saved. Now, add it to your cart or proceed to checkout.",
       });
-      // Reset form
-      setFormData({
-        fullName: "",
-        gender: "",
-        birthDate: "",
-        birthTime: "",
-        birthPlace: "",
-        fatherName: "",
-        kundaliType: "",
-      });
+      setSubmittedKundali(data);
     },
     onError: (error) => {
       toast({
@@ -89,6 +85,32 @@ export default function KundaliSection() {
     };
 
     createKundaliMutation.mutate(requestData);
+  };
+
+  const handleAddToCart = () => {
+    if (!submittedKundali) return;
+    const { kundaliType, price } = submittedKundali;
+    const typeDetails = kundaliTypes.find(t => t.value === kundaliType);
+
+    addToCart({
+      productId: `kundali-${kundaliType}`,
+      name: typeDetails?.name || "Kundali Service",
+      price: parseFloat(price),
+      imageUrl: "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=300&fit=crop",
+      quantity: 1,
+    });
+
+    toast({
+      title: "Added to Cart! ✨",
+      description: "Kundali service has been added to your cosmic collection.",
+    });
+    setSubmittedKundali(null); // Reset after adding to cart
+  };
+
+  const handleCheckout = () => {
+    if (!submittedKundali) return;
+    handleAddToCart();
+    navigate('/checkout');
   };
 
   const handleGetQuote = () => {
@@ -232,23 +254,43 @@ export default function KundaliSection() {
                 </div>
 
                 <div className="pt-4 space-y-4">
-                  <Button 
-                    type="button" 
-                    variant="secondary" 
-                    className="w-full"
-                    onClick={handleGetQuote}
-                    data-testid="button-get-quote"
-                  >
-                    Get Quote & Preview
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="w-full cosmic-glow"
-                    disabled={createKundaliMutation.isPending}
-                    data-testid="button-checkout"
-                  >
-                    {createKundaliMutation.isPending ? "Processing..." : "Proceed to Secure Checkout"}
-                  </Button>
+                  {!submittedKundali ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full"
+                        onClick={handleGetQuote}
+                        data-testid="button-get-quote"
+                      >
+                        Get Quote & Preview
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="w-full cosmic-glow"
+                        disabled={createKundaliMutation.isPending}
+                        data-testid="button-checkout"
+                      >
+                        {createKundaliMutation.isPending ? "Processing..." : "Save Kundali Details"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button
+                        onClick={handleAddToCart}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        Add to Cart
+                      </Button>
+                      <Button
+                        onClick={handleCheckout}
+                        className="w-full cosmic-glow"
+                      >
+                        Proceed to Checkout
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </form>
             </CardContent>

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -17,14 +16,17 @@ import {
   Calendar,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  ArrowLeft
 } from "lucide-react";
 import type { Order, KundaliRequest, Product, UserCart } from "@shared/schema";
+import { useNavigate } from "react-router-dom";
 
 export function UserDashboard() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
+  const navigate = useNavigate();
 
   // Fetch user orders
   const { data: orders = [] } = useQuery<Order[]>({
@@ -56,6 +58,7 @@ export function UserDashboard() {
       title: "Logged out successfully",
       description: "Thank you for visiting Nakshatra. Come back soon!",
     });
+    navigate('/');
   };
 
   if (!user) return null;
@@ -79,13 +82,19 @@ export function UserDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Navigation />
-      <div className="min-h-screen cosmic-bg p-6">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="cosmic-bg border border-cosmic-purple/30 rounded-lg p-6 mb-6">
+    <div className="min-h-screen cosmic-bg p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="cosmic-bg border border-cosmic-purple/30 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="border-cosmic-gold text-cosmic-gold hover:bg-cosmic-gold hover:text-cosmic-navy mr-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
             <div className="flex items-center gap-4">
               <div className="cosmic-glow w-16 h-16 rounded-full flex items-center justify-center">
                 <User className="w-8 h-8 text-white" />
@@ -102,8 +111,8 @@ export function UserDashboard() {
                 )}
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleLogout}
               className="border-cosmic-gold text-cosmic-gold hover:bg-cosmic-gold hover:text-cosmic-navy"
               data-testid="button-logout"

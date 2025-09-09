@@ -8,12 +8,14 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Home from "@/pages/home";
 import { UserDashboard } from "@/components/UserDashboard";
 import NotFound from "@/pages/not-found";
+import Checkout from "@/pages/Checkout";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={UserDashboard} />
+      <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>
   );

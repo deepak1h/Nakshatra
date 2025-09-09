@@ -74,11 +74,7 @@ export default function CelestialStore() {
 
   const handleLike = (product: Product) => {
     if (!user) {
-      toast({
-        title: "Please log in",
-        description: "You need to be logged in to like products.",
-        variant: "destructive",
-      });
+      alert("Please log in to like products.");
       return;
     }
 
