@@ -1,5 +1,6 @@
 import { Star, Book, Laptop, Rocket } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import portrait from "../image/portrait.png";
 
 const timelineEvents = [
   {
@@ -46,33 +47,44 @@ export default function JourneySection() {
         <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
           <div>
             <img 
-              src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=600" 
+              src={portrait}
               alt="Master Astrologer Portrait" 
               className="rounded-2xl shadow-2xl w-full object-cover aspect-square"
             />
           </div>
-          
           <div className="space-y-6">
-            <h3 className="text-3xl font-serif font-semibold star-pattern">Master Raj Kumar</h3>
+            <h3 className="text-3xl font-serif font-semibold star-pattern">
+              Dr. Mukund Murarai Pandey
+            </h3>
+
             <p className="text-muted-foreground text-lg leading-relaxed">
-              With over 25 years of experience in Vedic astrology, I have dedicated my life to helping souls discover their cosmic purpose. My journey began in the ancient temples of Varanasi, where I studied under renowned gurus and learned the sacred traditions passed down through generations.
+              With over 45 years of dedicated practice in Vedic astrology, I have guided
+              more than 35,000 individuals on their life journeys. Rooted in the timeless
+              wisdom of the ancient scriptures, my mission has always been to illuminate
+              the path of seekers with clarity, compassion, and truth.
             </p>
+
             <p className="text-muted-foreground leading-relaxed">
-              Today, I blend ancient wisdom with modern technology to make astrological guidance accessible to seekers worldwide. Each consultation is a sacred dialogue between the cosmos and the soul, revealing the divine blueprint that guides our earthly journey.
+              Over the decades, I have witnessed how the stars and planets shape human
+              destiny, offering answers where logic alone cannot. Each consultation is not
+              just a prediction but a profound dialogue between the soul and the cosmos —
+              revealing opportunities, overcoming challenges, and aligning with one’s
+              higher purpose.
             </p>
-            
+
             <div className="flex flex-wrap gap-4 mt-8">
               <div className="bg-accent/20 px-4 py-2 rounded-full">
-                <span className="text-accent font-medium">25+ Years Experience</span>
+                <span className="text-accent font-medium">45+ Years Experience</span>
               </div>
               <div className="bg-secondary/20 px-4 py-2 rounded-full">
-                <span className="text-secondary font-medium">10,000+ Consultations</span>
+                <span className="text-secondary font-medium">35,000+ Consultations</span>
               </div>
               <div className="bg-accent/20 px-4 py-2 rounded-full">
-                <span className="text-accent font-medium">Certified Master</span>
+                <span className="text-accent font-medium">Renowned Astrologer</span>
               </div>
             </div>
           </div>
+
         </div>
 
         {/* Timeline */}

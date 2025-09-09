@@ -5,6 +5,7 @@ import { X, ExternalLink, Gift } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { PromotionalBanner } from "@shared/schema";
 
+
 interface PromotionalBannersProps {
   position?: string;
   className?: string;
