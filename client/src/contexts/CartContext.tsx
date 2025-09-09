@@ -20,8 +20,8 @@ interface CartContextType {
   addToCart: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
-  getCartTotal: () => number;
-  clearCart: () => void;
+  getCartTotal: ()=> number;
+  clearCart: ()=> void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -48,14 +48,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addToCartMutation = useMutation({
     mutationFn: (item: { productId: string; quantity: number }) =>
       api.post("/api/user/cart", item),
-    onSuccess: () => {
+    onSuccess:()=> {
       queryClient.invalidateQueries({ queryKey: ["/api/user/cart"] });
     },
   });
 
   const removeFromCartMutation = useMutation({
     mutationFn: (productId: string) => api.delete(`/api/user/cart/${productId}`),
-    onSuccess: () => {
+    onSuccess: ()=> {
       queryClient.invalidateQueries({ queryKey: ["/api/user/cart"] });
     },
   });
@@ -63,14 +63,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantityMutation = useMutation({
     mutationFn: (item: { productId: string; quantity: number }) =>
       api.put(`/api/user/cart/${item.productId}`, { quantity: item.quantity }),
-    onSuccess: ()_ => {
+    onSuccess: ()=> {
       queryClient.invalidateQueries({ queryKey: ["/api/user/cart"] });
     },
   });
 
   const clearCartMutation = useMutation({
-    mutationFn: () => api.delete('/api/user/cart'),
-    onSuccess: () => {
+    mutationFn: ()=> api.delete('/api/user/cart'),
+    onSuccess: ()=> {
       queryClient.invalidateQueries({ queryKey: ['/api/user/cart'] });
     },
   });
@@ -111,11 +111,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const getCartTotal = () => {
+  const getCartTotal = ()=> {
     return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const clearCart = () => {
+  const clearCart = ()=> {
     if (!user) return;
     clearCartMutation.mutate();
   };
@@ -136,7 +136,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useCart() {
+export function useCart(){
   const context = useContext(CartContext);
   if (context === undefined) {
     throw new Error('useCart must be used within a CartProvider');
