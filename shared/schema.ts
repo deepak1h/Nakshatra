@@ -22,6 +22,12 @@ export const users = pgTable("users", {
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
   profileImageUrl: varchar("profile_image_url", { length: 500 }),
+  password: varchar("password", { length: 255 }), // For local auth
+  phone: varchar("phone", { length: 20 }),
+  dateOfBirth: timestamp("date_of_birth"),
+  preferences: jsonb("preferences"), // Store user preferences like zodiac sign, interests
+  isEmailVerified: boolean("is_email_verified").default(false),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -101,11 +107,64 @@ export const contactMessages = pgTable("contact_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Liked products table
+export const likedProducts = pgTable("liked_products", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  productId: uuid("product_id").references(() => products.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userProductIndex: index().on(table.userId, table.productId),
+}));
+
+// User cart table (persistent cart for logged in users)
+export const userCart = pgTable("user_cart", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  productId: uuid("product_id").references(() => products.id).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userProductIndex: index().on(table.userId, table.productId),
+}));
+
+// Promotional banners table
+export const promotionalBanners = pgTable("promotional_banners", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  imageUrl: varchar("image_url", { length: 500 }),
+  ctaText: varchar("cta_text", { length: 100 }),
+  ctaLink: varchar("cta_link", { length: 500 }),
+  discountCode: varchar("discount_code", { length: 50 }),
+  discountPercent: integer("discount_percent"),
+  validFrom: timestamp("valid_from"),
+  validUntil: timestamp("valid_until"),
+  isActive: boolean("is_active").default(true),
+  position: varchar("position", { length: 50 }).default("top"), // top, bottom, sidebar
+  priority: integer("priority").default(0), // higher priority shows first
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User sessions table
+export const userSessions = pgTable("user_sessions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   orders: many(orders),
   kundaliRequests: many(kundaliRequests),
   chatMessages: many(chatMessages),
+  likedProducts: many(likedProducts),
+  userCart: many(userCart),
+  userSessions: many(userSessions),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
@@ -129,6 +188,8 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 
 export const productsRelations = relations(products, ({ many }) => ({
   orderItems: many(orderItems),
+  likedProducts: many(likedProducts),
+  userCart: many(userCart),
 }));
 
 export const kundaliRequestsRelations = relations(kundaliRequests, ({ one }) => ({
@@ -141,6 +202,35 @@ export const kundaliRequestsRelations = relations(kundaliRequests, ({ one }) => 
 export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
   user: one(users, {
     fields: [chatMessages.userId],
+    references: [users.id],
+  }),
+}));
+
+export const likedProductsRelations = relations(likedProducts, ({ one }) => ({
+  user: one(users, {
+    fields: [likedProducts.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [likedProducts.productId],
+    references: [products.id],
+  }),
+}));
+
+export const userCartRelations = relations(userCart, ({ one }) => ({
+  user: one(users, {
+    fields: [userCart.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [userCart.productId],
+    references: [products.id],
+  }),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
     references: [users.id],
   }),
 }));
@@ -187,6 +277,47 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
   createdAt: true,
 });
 
+export const insertLikedProductSchema = createInsertSchema(likedProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserCartSchema = createInsertSchema(userCart).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPromotionalBannerSchema = createInsertSchema(promotionalBanners).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Authentication schemas
+export const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phone: z.string().optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -208,3 +339,20 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 
 export type ContactMessage = typeof contactMessages.$inferSelect;
 export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+
+export type LikedProduct = typeof likedProducts.$inferSelect;
+export type InsertLikedProduct = z.infer<typeof insertLikedProductSchema>;
+
+export type UserCart = typeof userCart.$inferSelect;
+export type InsertUserCart = z.infer<typeof insertUserCartSchema>;
+
+export type PromotionalBanner = typeof promotionalBanners.$inferSelect;
+export type InsertPromotionalBanner = z.infer<typeof insertPromotionalBannerSchema>;
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+
+// Auth types
+export type RegisterData = z.infer<typeof registerSchema>;
+export type LoginData = z.infer<typeof loginSchema>;
+export type ChangePasswordData = z.infer<typeof changePasswordSchema>;

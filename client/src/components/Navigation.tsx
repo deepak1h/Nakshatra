@@ -1,12 +1,23 @@
 import { useState } from "react";
-import { Star, ShoppingCart, User, Menu, X } from "lucide-react";
+import { Star, ShoppingCart, User, Menu, X, LogIn, UserCircle, Settings } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { cartItems, setIsCartOpen } = useCart();
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  const handleLogout = async () => {
+    await logout();
+    setIsMobileMenuOpen(false);
+  };
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -87,9 +98,54 @@ export default function Navigation() {
               </span>
             )}
           </button>
-          <button className="text-foreground hover:text-accent transition-colors" data-testid="button-user">
-            <User className="text-xl" />
-          </button>
+          {/* User Authentication */}
+          {isLoading ? (
+            <div className="w-8 h-8 animate-pulse bg-accent/20 rounded-full" />
+          ) : isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-8 w-8 rounded-full p-0"
+                  data-testid="button-user-menu"
+                >
+                  <UserCircle className="h-6 w-6 text-foreground hover:text-accent" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 cosmic-bg border-cosmic-purple/30" align="end">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium text-white">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <p className="text-xs text-cosmic-gold/70">
+                    {user?.email}
+                  </p>
+                </div>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-400 hover:text-red-300">
+                  <LogIn className="mr-2 h-4 w-4 rotate-180" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <AuthModal>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+                data-testid="button-login"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Login
+              </Button>
+            </AuthModal>
+          )}
           <button 
             className="lg:hidden text-foreground"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -145,6 +201,48 @@ export default function Navigation() {
           >
             Contact
           </button>
+          
+          {/* Mobile User Authentication */}
+          <div className="border-t border-border pt-4">
+            {isAuthenticated ? (
+              <div className="space-y-2">
+                <div className="px-2 py-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+                <Link href="/dashboard">
+                  <button 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full text-left block text-foreground hover:text-accent transition-colors"
+                  >
+                    Dashboard
+                  </button>
+                </Link>
+                <button 
+                  onClick={handleLogout}
+                  className="w-full text-left block text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <AuthModal>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login / Register
+                </Button>
+              </AuthModal>
+            )}
+          </div>
         </div>
       )}
     </nav>
