@@ -1,12 +1,12 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getAstrologicalResponse, generateKundaliSummary } from "./services/gemini";
-import { 
-  insertProductSchema, 
-  insertOrderSchema, 
-  insertKundaliRequestSchema, 
-  insertChatMessageSchema, 
+import {
+  insertProductSchema,
+  insertOrderSchema,
+  insertKundaliRequestSchema,
+  insertChatMessageSchema,
   insertContactMessageSchema,
   insertLikedProductSchema,
   insertUserCartSchema,
@@ -14,7 +14,7 @@ import {
   registerSchema,
   loginSchema,
   changePasswordSchema,
-  type User
+  type User,
 } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -39,15 +39,15 @@ declare global {
   }
 }
 
-async function requireAuth(req: any, res: any, next: any) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
-  
+
   try {
     const user = await storage.getUser(req.session.userId);
     if (!user) {
-      req.session.destroy();
+      req.session.destroy(() => {});
       return res.status(401).json({ message: "User not found" });
     }
     req.user = user;
@@ -58,7 +58,7 @@ async function requireAuth(req: any, res: any, next: any) {
   }
 }
 
-async function optionalAuth(req: any, res: any, next: any) {
+async function optionalAuth(req: Request, res: Response, next: NextFunction) {
   if (req.session?.userId) {
     try {
       const user = await storage.getUser(req.session.userId);
@@ -72,25 +72,27 @@ async function optionalAuth(req: any, res: any, next: any) {
   next();
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> { // Changed return type to void
   // Session middleware
-  app.use(session({
-    store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'nakshatra-secret-key-change-this',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    },
-  }));
+  app.use(
+    session({
+      store: sessionStore,
+      secret: process.env.SESSION_SECRET || "nakshatra-secret-key-change-this",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      },
+    })
+  );
 
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {
       const userData = registerSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
@@ -107,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Create session
-      (req.session as any).userId = user.id;
+      req.session.userId = user.id; // Removed type assertion
       await storage.updateLastLogin(user.id);
 
       // Return user without password
@@ -122,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
-      
+
       // Find user
       const user = await storage.getUserByEmail(email);
       if (!user || !user.password) {
@@ -136,7 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create session
-      (req.session as any).userId = user.id;
+      req.session.userId = user.id; // Removed type assertion
       await storage.updateLastLogin(user.id);
 
       // Return user without password
@@ -172,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/change-password", requireAuth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
-      
+
       const user = req.user!;
       if (!user.password) {
         return res.status(400).json({ message: "Password not set" });
@@ -201,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", async (req, res) => {
     try {
       const category = req.query.category as string;
-      const products = category 
+      const products = category
         ? await storage.getProductsByCategory(category)
         : await storage.getAllProducts();
       res.json(products);
@@ -252,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const kundaliData = insertKundaliRequestSchema.parse(req.body);
       const request = await storage.createKundaliRequest(kundaliData);
-      
+
       // Generate AI summary for the request
       try {
         const summary = await generateKundaliSummary({
@@ -262,10 +264,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           birthPlace: kundaliData.birthPlace,
           gender: kundaliData.gender,
         });
-        
-        res.json({ 
-          ...request, 
-          aiSummary: summary 
+
+        res.json({
+          ...request,
+          aiSummary: summary,
         });
       } catch (aiError) {
         console.error("AI summary generation failed:", aiError);
@@ -281,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat", async (req, res) => {
     try {
       const { message, userId } = req.body;
-      
+
       if (!message) {
         return res.status(400).json({ message: "Message is required" });
       }
@@ -347,7 +349,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: "Authentic Neelam for Saturn's blessings",
           price: "12999.00",
           category: "rings",
-          imageUrl: "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
+          imageUrl:
+            "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
           stock: 5,
         },
         {
@@ -355,7 +358,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: "Sacred geometry for prosperity",
           price: "3499.00",
           category: "yantras",
-          imageUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
+          imageUrl:
+            "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
           stock: 10,
         },
         {
@@ -363,7 +367,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: "7 chakra balancing stones",
           price: "2199.00",
           category: "stones",
-          imageUrl: "https://pixabay.com/get/g815d14118c29afb10d6d11e272db22518d7ad8ccb63773474af24d83ace503826cfdcbaf760b5840fadd8be12e2ad648330ca27948c943f11aad1b024541f618_1280.jpg",
+          imageUrl:
+            "https://pixabay.com/get/g815d14118c29afb10d6d11e272db22518d7ad8ccb63773474af24d83ace503826cfdcbaf760b5840fadd8be12e2ad648330ca27948c943f11aad1b024541f618_1280.jpg",
           stock: 15,
         },
         {
@@ -371,7 +376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: "Complete handbook for beginners",
           price: "899.00",
           category: "books",
-          imageUrl: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
+          imageUrl:
+            "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
           stock: 20,
         },
         {
@@ -379,7 +385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: "Manikya for Sun's power",
           price: "8999.00",
           category: "stones",
-          imageUrl: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
+          imageUrl:
+            "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
           stock: 3,
         },
         {
@@ -387,7 +394,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: "Sacred symbol protection",
           price: "1599.00",
           category: "accessories",
-          imageUrl: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
+          imageUrl:
+            "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300",
           stock: 12,
         },
       ];
@@ -404,7 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes
-  
+
   // Liked products routes
   app.post("/api/user/liked-products", requireAuth, async (req, res) => {
     try {
@@ -523,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Kundali history route  
+  // Kundali history route
   app.get("/api/user/kundali-requests", requireAuth, async (req, res) => {
     try {
       const requests = await storage.getKundaliRequestsByUser(req.user!.id);
@@ -607,17 +615,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBanners.push(created);
       }
 
-      res.json({ 
-        message: "Sample promotional banners created successfully", 
+      res.json({
+        message: "Sample promotional banners created successfully",
         count: createdBanners.length,
-        banners: createdBanners 
+        banners: createdBanners,
       });
     } catch (error) {
       console.error("Error seeding promotional banners:", error);
       res.status(500).json({ message: "Failed to seed promotional banners" });
     }
   });
-
-  const httpServer = createServer(app);
-  return httpServer;
 }

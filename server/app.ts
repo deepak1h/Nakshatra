@@ -1,15 +1,36 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Essential middleware to ensure req is properly initialized
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Logging middleware
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Debug: Log the entire request object to inspect its properties
+  console.log("Request object:", {
+    path: req.path,
+    url: req.url,
+    originalUrl: req.originalUrl,
+    method: req.method,
+    headers: req.headers,
+    baseUrl: req.baseUrl,
+  });
+
   const start = Date.now();
-  const path = req.path;
+  const path = req.path || req.url || req.originalUrl || "/"; // Fallback chain
+
+  // Skip logging if path is not a string or undefined
+  if (typeof path !== "string") {
+    console.log("Skipping log due to invalid path:", path);
+    next();
+    return;
+  }
+
   let capturedJsonResponse: Record<string, any> | undefined;
 
   const originalResJson = res.json;
@@ -29,6 +50,8 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
       log(logLine);
+    } else {
+      console.log(`Skipping log for non-API path: ${path}`);
     }
   });
 
@@ -40,15 +63,16 @@ registerRoutes(app);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("Error handler:", err);
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
   res.status(status).json({ message });
-  throw err;
 });
 
 // Static vs Vite (only run Vite locally)
-if (app.get("env") === "development") {
-  setupVite(app);
+if (process.env.NODE_ENV === "development") {
+  const server = createServer(app);
+  setupVite(app, server);
 } else {
   serveStatic(app);
 }
