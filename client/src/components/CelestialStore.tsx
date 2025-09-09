@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@shared/schema";
+import { Heart } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
 
 const categories = [
   { id: "all", name: "All Products" },
@@ -19,14 +22,76 @@ export default function CelestialStore() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { addToCart } = useCart();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: products = [], isLoading, error } = useQuery<Product[]>({
     queryKey: ["/api/products", selectedCategory === "all" ? "" : `?category=${selectedCategory}`],
   });
 
+  const { data: likedProducts = [] } = useQuery<Product[]>({
+    queryKey: ["/api/user/liked-products"],
+    enabled: !!user,
+  });
+
+  const likedProductIds = new Set(likedProducts.map((p) => p.id));
+
+  const likeMutation = useMutation({
+    mutationFn: (productId: string) => api.post(`/api/user/liked-products`, { productId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/liked-products"] });
+      toast({
+        title: "Added to Favorites! ❤️",
+        description: "This item has been added to your favorites.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Oops! Something went wrong.",
+        description: "Could not add to favorites. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unlikeMutation = useMutation({
+    mutationFn: (productId: string) => api.delete(`/api/user/liked-products/${productId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/liked-products"] });
+      toast({
+        title: "Removed from Favorites",
+        description: "This item has been removed from your favorites.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Oops! Something went wrong.",
+        description: "Could not remove from favorites. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLike = (product: Product) => {
+    if (!user) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to like products.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (likedProductIds.has(product.id)) {
+      unlikeMutation.mutate(product.id);
+    } else {
+      likeMutation.mutate(product.id);
+    }
+  };
+
   const handleAddToCart = (product: Product) => {
     addToCart({
-      id: product.id,
+      productId: product.id,
       name: product.name,
       price: parseFloat(product.price),
       imageUrl: product.imageUrl || "",
@@ -102,18 +167,27 @@ export default function CelestialStore() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
             {products.map((product: Product) => (
-              <Card key={product.id} className="product-card cursor-pointer border border-border overflow-hidden">
-                <img 
-                  src={product.imageUrl || "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"} 
-                  alt={product.name} 
-                  className="w-full h-48 object-cover"
-                />
-                <CardContent className="p-6">
+              <Card key={product.id} className="product-card border border-border overflow-hidden flex flex-col">
+                <div className="relative">
+                  <img
+                    src={product.imageUrl || "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"}
+                    alt={product.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <Button
+                    size="icon"
+                    className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm rounded-full text-rose-500 hover:bg-white"
+                    onClick={() => handleLike(product)}
+                  >
+                    <Heart className={`w-5 h-5 ${likedProductIds.has(product.id) ? "fill-current" : ""}`} />
+                  </Button>
+                </div>
+                <CardContent className="p-6 flex-grow flex flex-col">
                   <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{product.description}</p>
-                  <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2 flex-grow">{product.description}</p>
+                  <div className="flex items-center justify-between mt-auto">
                     <span className="text-2xl font-bold text-accent">₹{product.price}</span>
-                    <Button 
+                    <Button
                       onClick={() => handleAddToCart(product)}
                       className="font-medium transition-all"
                       data-testid={`button-add-to-cart-${product.id}`}

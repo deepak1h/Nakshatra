@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -78,10 +79,12 @@ export function UserDashboard() {
   };
 
   return (
-    <div className="min-h-screen cosmic-bg p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="cosmic-bg border border-cosmic-purple/30 rounded-lg p-6 mb-6">
+    <div className="min-h-screen bg-background text-foreground">
+      <Navigation />
+      <div className="min-h-screen cosmic-bg p-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="cosmic-bg border border-cosmic-purple/30 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="cosmic-glow w-16 h-16 rounded-full flex items-center justify-center">

@@ -248,10 +248,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Kundali API
-  app.post("/api/kundali", async (req, res) => {
+  app.post("/api/kundali", requireAuth, async (req, res) => {
     try {
       const kundaliData = insertKundaliRequestSchema.parse(req.body);
-      const request = await storage.createKundaliRequest(kundaliData);
+      const request = await storage.createKundaliRequest({
+        ...kundaliData,
+        userId: req.user!.id,
+      });
       
       // Generate AI summary for the request
       try {
