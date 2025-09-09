@@ -5,12 +5,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { cartItems } = useCart();
   const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
@@ -21,6 +22,10 @@ export default function Navigation() {
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
+    if (location !== "/") {
+      setLocation("/"); // go home first
+      return;
+    }
     if (element) {
       const offsetTop = element.offsetTop - 80;
       window.scrollTo({
@@ -30,6 +35,8 @@ export default function Navigation() {
     }
     setIsMobileMenuOpen(false);
   };
+
+  
 
   return (
     <nav className="floating-nav fixed top-0 left-0 right-0 z-50 px-6 py-4">

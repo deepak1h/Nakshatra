@@ -86,6 +86,7 @@ export default function CelestialStore() {
   };
 
   const handleAddToCart = (product: Product) => {
+
     addToCart({
       productId: product.id,
       name: product.name,
@@ -94,11 +95,20 @@ export default function CelestialStore() {
       quantity: 1,
     });
 
-    toast({
-      title: "Added to Cart! ✨",
-      description: `${product.name} has been added to your cosmic collection.`,
-    });
-  };
+    if (user){
+      toast({
+        title: "Added to Cart! ✨",
+        description: `${product.name} has been added to your cosmic collection.`,
+      });
+    }
+  else{
+      toast({
+        title: "Please log in to add items to cart.",
+        description: `You need to be logged in to add items to your cart.`,
+        variant: "destructive",
+      });
+    }  
+};
 
   if (error) {
     return (

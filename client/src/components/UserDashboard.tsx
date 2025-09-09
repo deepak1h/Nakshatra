@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { Order, KundaliRequest, Product, UserCart } from "@shared/schema";
 import { useLocation } from "wouter";
+import NavigationBar from "@/components/Navigation";
 
 
 
@@ -87,9 +88,11 @@ export function UserDashboard() {
   };
 
   return (
+    
     <div className="min-h-screen bg-background text-foreground">
-      <Navigation />
-      <div className="min-h-screen cosmic-bg p-6">
+        <NavigationBar />
+
+      <div className="min-h-screen cosmic-bg p-6 pt-20">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="cosmic-bg border border-cosmic-purple/30 rounded-lg p-6 mb-6">
