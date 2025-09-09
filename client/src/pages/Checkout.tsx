@@ -8,9 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 
 
-setLocation("/checkout");
-
-
 export default function Checkout() {
   const { cartItems, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
