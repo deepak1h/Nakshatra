@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,7 +32,9 @@ const kundaliTypes = [
 export default function KundaliSection() {
   const { toast } = useToast();
   const { addToCart } = useCart();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
+
+
   const [formData, setFormData] = useState<KundaliFormData>({
     fullName: "",
     gender: "",
@@ -110,7 +112,7 @@ export default function KundaliSection() {
   const handleCheckout = () => {
     if (!submittedKundali) return;
     handleAddToCart();
-    navigate('/checkout');
+    setLocation("/checkout");
   };
 
   const handleGetQuote = () => {

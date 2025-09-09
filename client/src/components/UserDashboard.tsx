@@ -19,13 +19,17 @@ import {
   MapPin,
 } from "lucide-react";
 import type { Order, KundaliRequest, Product, UserCart } from "@shared/schema";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
+
+
+
 
 export function UserDashboard() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
+
 
   // Fetch user orders
   const { data: orders = [] } = useQuery<Order[]>({
@@ -59,7 +63,7 @@ export function UserDashboard() {
       title: "Logged out successfully",
       description: "Thank you for visiting Nakshatra. Come back soon!",
     });
-    navigate('/');
+    setLocation("/");
   };
 
   if (!user) return null;

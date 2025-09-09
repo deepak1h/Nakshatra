@@ -5,19 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
+
+
+setLocation("/checkout");
+
 
 export default function Checkout() {
   const { cartItems, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const handlePlaceOrder = () => {
     // In a real app, you'd integrate with a payment gateway here.
     // For this demo, we'll just simulate a successful order.
     alert("Order placed successfully! (Simulation)");
     clearCart();
-    navigate('/dashboard');
+    setLocation("/dashboard");
   };
 
   if (!user) {
@@ -25,7 +29,7 @@ export default function Checkout() {
       <div className="container mx-auto px-6 py-20 text-center">
         <h1 className="text-3xl font-bold mb-4">Please log in</h1>
         <p>You need to be logged in to proceed to checkout.</p>
-        <Button onClick={() => navigate('/login')} className="mt-4">
+        <Button onClick={() => setLocation('/login')} className="mt-4">
           Go to Login
         </Button>
       </div>
