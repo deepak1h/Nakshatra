@@ -94,6 +94,13 @@ export default function CelestialStore() {
       imageUrl: product.imageUrl || "",
       quantity: 1,
     });
+    console.log("Adding to cart:", {
+      productId: product.id,
+      name: product.name,
+      price: parseFloat(product.price),
+      imageUrl: product.imageUrl || "",
+      quantity: 1,
+    })
 
     if (user){
       toast({
