@@ -458,6 +458,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/user/cart", requireAuth, async (req, res) => {
     try {
       const { productId, quantity = 1 } = req.body;
+      console.log("ROUTES: Adding to cart:", productId, quantity);
+
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required" });
       }

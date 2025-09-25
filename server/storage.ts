@@ -226,6 +226,7 @@ export class DatabaseStorage implements IStorage {
 
   // Liked products operations
   async addLikedProduct(userId: string, productId: string): Promise<LikedProduct> {
+    console.log("liked product", userId, productId)
     const [likedProduct] = await db
       .insert(likedProducts)
       .values({ userId, productId })
@@ -272,6 +273,8 @@ export class DatabaseStorage implements IStorage {
   // User cart operations
   async addToUserCart(userId: string, productId: string, quantity: number): Promise<UserCart> {
     // Check if item already exists in cart
+
+    console.log("add to cart", userId, productId, quantity)
     const [existing] = await db
       .select()
       .from(userCart)

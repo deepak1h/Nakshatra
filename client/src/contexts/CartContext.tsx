@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Product, UserCart } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface CartItem {
   id: string;
@@ -29,10 +30,12 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast(); // 2. Initialize toast
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   const { data: cartItems = [] } = useQuery<CartItem[]>({
-    queryKey: ["/api/user/cart"],
+    queryKey: ["userCart"], // Use a more descriptive query key
+    queryFn: api.getUserCart, // Call the new function
     enabled: !!user,
     select: (data: (UserCart & { product: Product })[]) =>
       data.map((item) => ({
@@ -45,45 +48,60 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })),
   });
 
-  const addToCartMutation = useMutation({
-    mutationFn: (item: { productId: string; quantity: number }) =>
-      api.post("/api/user/cart", item),
-    onSuccess:()=> {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/cart"] });
+const addToCartMutation = useMutation({
+    mutationFn: (item: { productId: string; quantity: number; name: string }) =>
+      api.addToCart({ productId: item.productId, quantity: item.quantity }),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["userCart"] });
+      toast({
+        title: "Added to Cart! ✨",
+        description: `${variables.name} has been added to your cosmic collection.`,
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Failed to add to cart:", error);
+      toast({
+        title: "Something went wrong.",
+        description: error.message || "Could not add item to cart.",
+        variant: "destructive",
+      });
     },
   });
 
+  // 3. Update the other mutations as well
   const removeFromCartMutation = useMutation({
-    mutationFn: (productId: string) => api.delete(`/api/user/cart/${productId}`),
-    onSuccess: ()=> {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/cart"] });
+    mutationFn: (productId: string) => api.removeFromCart(productId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userCart"] });
     },
   });
 
   const updateQuantityMutation = useMutation({
-    mutationFn: (item: { productId: string; quantity: number }) =>
-      api.put(`/api/user/cart/${item.productId}`, { quantity: item.quantity }),
-    onSuccess: ()=> {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/cart"] });
+    mutationFn: (item: { productId: string; quantity: number }) => api.updateCartQuantity(item),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userCart"] });
     },
   });
 
   const clearCartMutation = useMutation({
-    mutationFn: ()=> api.delete('/api/user/cart'),
-    onSuccess: ()=> {
-      queryClient.invalidateQueries({ queryKey: ['/api/user/cart'] });
+    mutationFn: api.clearCart,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userCart"] });
     },
   });
 
   const addToCart = (item: Omit<CartItem, 'quantity' | 'id'> & { quantity?: number }) => {
     if (!user) {
-      // Handle guest cart logic here if needed
-      console.log("User not logged in, cart not saved to DB");
+      toast({
+        title: "Please log in to add items to cart.",
+        description: "You need to be logged in to add items to your cart.",
+        variant: "destructive",
+      });
       return;
     }
 
     const existingItem = cartItems.find(cartItem => cartItem.productId === item.productId);
-
+     
     if (existingItem) {
       updateQuantityMutation.mutate({
         productId: existingItem.productId,
@@ -93,10 +111,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addToCartMutation.mutate({
         productId: item.productId,
         quantity: item.quantity || 1,
+        name: item.name,
       });
     }
   };
-
   const removeFromCart = (productId: string) => {
     if (!user) return;
     removeFromCartMutation.mutate(productId);
