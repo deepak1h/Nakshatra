@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/contexts/CartContext";
@@ -102,20 +103,28 @@ export default function CelestialStore() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
             {products.map((product: Product) => (
-              <Card key={product.id} className="product-card cursor-pointer border border-border overflow-hidden">
-                <img 
-                  src={product.imageUrl || "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"} 
-                  alt={product.name} 
-                  className="w-full h-48 object-cover"
-                />
+              <Card key={product.id} className="product-card border border-border overflow-hidden hover:border-cosmic-gold/50 transition-all group">
+                <Link href={`/product/${product.id}`}>
+                  <img 
+                    src={product.imageUrl || "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"} 
+                    alt={product.name} 
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                  />
+                </Link>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
+                  <Link href={`/product/${product.id}`}>
+                    <h3 className="font-semibold text-lg mb-2 hover:text-cosmic-gold transition-colors cursor-pointer">{product.name}</h3>
+                  </Link>
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{product.description}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold text-accent">₹{product.price}</span>
                     <Button 
-                      onClick={() => handleAddToCart(product)}
-                      className="font-medium transition-all"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddToCart(product);
+                      }}
+                      className="font-medium transition-all cosmic-glow"
                       data-testid={`button-add-to-cart-${product.id}`}
                     >
                       Add to Cart

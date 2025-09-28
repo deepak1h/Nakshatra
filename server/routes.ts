@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getAstrologicalResponse, generateKundaliSummary } from "./services/gemini";
 import { 
-  insertProductSchema, 
+  insertProductSchema,
+  updateProductSchema,
   insertOrderSchema, 
   insertKundaliRequestSchema, 
   insertChatMessageSchema, 
@@ -36,6 +37,14 @@ declare global {
     interface Request {
       user?: User;
     }
+  }
+}
+
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+    isAdmin?: boolean;
+    adminUsername?: string;
   }
 }
 
@@ -197,6 +206,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Authentication
+  function requireAdmin(req: any, res: any, next: any) {
+    if (!req.session?.isAdmin) {
+      return res.status(401).json({ message: "Admin authentication required" });
+    }
+    next();
+  }
+
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      // Hardcoded admin credentials
+      if (username === "admin" && password === "admin123") {
+        (req.session as any).isAdmin = true;
+        (req.session as any).adminUsername = username;
+        res.json({ 
+          success: true, 
+          admin: { username: "admin", role: "administrator" } 
+        });
+      } else {
+        res.status(401).json({ message: "Invalid admin credentials" });
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Admin login failed" });
+    }
+  });
+
+  app.post("/api/admin/logout", async (req, res) => {
+    try {
+      if (req.session) {
+        (req.session as any).isAdmin = false;
+        (req.session as any).adminUsername = null;
+      }
+      res.json({ message: "Admin logged out successfully" });
+    } catch (error) {
+      console.error("Admin logout error:", error);
+      res.status(500).json({ message: "Admin logout failed" });
+    }
+  });
+
+  app.get("/api/admin/me", async (req, res) => {
+    try {
+      if (req.session?.isAdmin) {
+        res.json({ 
+          admin: { 
+            username: req.session.adminUsername || "admin", 
+            role: "administrator" 
+          } 
+        });
+      } else {
+        res.status(401).json({ message: "Not authenticated as admin" });
+      }
+    } catch (error) {
+      console.error("Admin auth check error:", error);
+      res.status(500).json({ message: "Admin auth check failed" });
+    }
+  });
+
   // Products API
   app.get("/api/products", async (req, res) => {
     try {
@@ -221,6 +290,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching product:", error);
       res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+
+  // Admin Products API
+  app.post("/api/admin/products", requireAdmin, async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
+      res.json(product);
+    } catch (error) {
+      console.error("Error creating product:", error);
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  app.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
+    try {
+      const productData = updateProductSchema.parse(req.body);
+      const product = await storage.updateProduct(req.params.id, productData);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/admin/products/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteProduct(req.params.id);
+      res.json({ message: "Product deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // Admin Orders API
+  app.get("/api/admin/orders", requireAdmin, async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.put("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+    try {
+      const { status, trackingId, courierPartner, description } = req.body;
+      const order = await storage.updateOrderStatus(req.params.id, status, trackingId, courierPartner, description);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating order:", error);
+      res.status(500).json({ message: "Failed to update order" });
     }
   });
 
