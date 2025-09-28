@@ -90,6 +90,8 @@ const addToCartMutation = useMutation({
     },
   });
 
+
+
   const addToCart = (item: Omit<CartItem, 'quantity' | 'id'> & { quantity?: number }) => {
     if (!user) {
       toast({

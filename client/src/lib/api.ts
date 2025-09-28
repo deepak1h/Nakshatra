@@ -69,4 +69,20 @@ export const api = {
   createOrderItem: (data: any) => {
     return apiRequest('POST', '/api/order-items', data);
   },
+
+  
+  // --- NEW: Liked Products ---
+  getLikedProducts: () => {
+    return fetchJson('/api/user/liked-products');
+  },
+
+  likeProduct: (productId: string) => {
+    return apiRequest('POST', '/api/user/liked-products', { productId });
+  },
+
+  unlikeProduct: (productId: string) => {
+    return apiRequest('DELETE', `/api/user/liked-products/${productId}`);
+  },
+  // --- END NEW ---
+
 };

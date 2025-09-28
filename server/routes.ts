@@ -415,6 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required" });
       }
+      console.log("ROUTES: Adding liked product:", productId);
 
       const likedProduct = await storage.addLikedProduct(req.user!.id, productId);
       res.json(likedProduct);

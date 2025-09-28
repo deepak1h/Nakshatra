@@ -30,16 +30,18 @@ export default function CelestialStore() {
   });
 
   const { data: likedProducts = [] } = useQuery<Product[]>({
-    queryKey: ["/api/user/liked-products"],
+    queryKey: ["likedProducts"], // Using a cleaner key
+    queryFn: api.getLikedProducts, // Use the new function here
     enabled: !!user,
   });
-
   const likedProductIds = new Set(likedProducts.map((p) => p.id));
 
-  const likeMutation = useMutation({
-    mutationFn: (productId: string) => api.post(`/api/user/liked-products`, { productId }),
+
+   const likeMutation = useMutation({
+    mutationFn: (productId: string) => api.likeProduct(productId), // Use the new function
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/liked-products"] });
+      // Invalidate with the same key used in useQuery
+      queryClient.invalidateQueries({ queryKey: ["likedProducts"] });
       toast({
         title: "Added to Favorites! ❤️",
         description: "This item has been added to your favorites.",
@@ -54,10 +56,12 @@ export default function CelestialStore() {
     },
   });
 
+  // 3. Update the unlike mutation
   const unlikeMutation = useMutation({
-    mutationFn: (productId: string) => api.delete(`/api/user/liked-products/${productId}`),
+    mutationFn: (productId: string) => api.unlikeProduct(productId), // Use the new function
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/liked-products"] });
+      // Invalidate with the same key used in useQuery
+      queryClient.invalidateQueries({ queryKey: ["likedProducts"] });
       toast({
         title: "Removed from Favorites",
         description: "This item has been removed from your favorites.",
@@ -72,6 +76,7 @@ export default function CelestialStore() {
     },
   });
 
+  // This handleLike function does not need any changes
   const handleLike = (product: Product) => {
     if (!user) {
       alert("Please log in to like products.");
@@ -84,6 +89,7 @@ export default function CelestialStore() {
       likeMutation.mutate(product.id);
     }
   };
+
 
   const handleAddToCart = (product: Product) => {
 
