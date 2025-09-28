@@ -8,6 +8,7 @@ import { Product } from "@shared/schema";
 import { Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { Link } from "wouter";
 
 const categories = [
   { id: "all", name: "All Products" },
@@ -175,11 +176,13 @@ export default function CelestialStore() {
             {products.map((product: Product) => (
               <Card key={product.id} className="product-card border border-border overflow-hidden flex flex-col">
                 <div className="relative">
-                  <img
-                    src={product.imageUrl || "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"}
-                    alt={product.name}
-                    className="w-full h-48 object-cover"
+                  <Link href={`/product/${product.id}`}>
+                  <img 
+                    src={product.imageUrl || "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"} 
+                    alt={product.name} 
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                   />
+                </Link>
                   <Button
                     size="icon"
                     className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm rounded-full text-rose-500 hover:bg-white"
@@ -189,7 +192,9 @@ export default function CelestialStore() {
                   </Button>
                 </div>
                 <CardContent className="p-6 flex-grow flex flex-col">
-                  <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
+                  <Link href={`/product/${product.id}`}>
+                    <h3 className="font-semibold text-lg mb-2 hover:text-cosmic-gold transition-colors cursor-pointer">{product.name}</h3>
+                  </Link>
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2 flex-grow">{product.description}</p>
                   <div className="flex items-center justify-between mt-auto">
                     <span className="text-2xl font-bold text-accent">₹{product.price}</span>

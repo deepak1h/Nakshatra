@@ -9,6 +9,9 @@ import Home from "@/pages/home";
 import { UserDashboard } from "@/components/UserDashboard";
 import NotFound from "@/pages/not-found";
 import Checkout from "@/pages/Checkout";
+import ProductDetail from "@/components/ProductDetail";
+import { AdminProvider } from "@/hooks/useAdmin";
+import AdminPage from "@/components/admin/AdminPage";
 
 function Router() {
   return (
@@ -16,6 +19,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={UserDashboard} />
       <Route path="/checkout" component={Checkout} />
+      <Route path="/admin" component={AdminPage} />
+      <Route path="/product/:id" component={ProductDetail} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -25,15 +30,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <CartProvider>
-            <Toaster />
-            <Router />
-          </CartProvider>
-        </TooltipProvider>
+        <AdminProvider>
+          <TooltipProvider>
+            <CartProvider>
+              <Toaster />
+              <Router />
+            </CartProvider>
+          </TooltipProvider>
+        </AdminProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
 }
-
 export default App;
