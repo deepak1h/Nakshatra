@@ -85,4 +85,17 @@ export const api = {
   },
   // --- END NEW ---
 
+  // Admin
+  getAdminOrderById: (orderId: string) => {
+    return apiRequest('GET', `/api/admin/orders/${orderId}`);
+  },
+
+  getAdminOrders: () => {
+    return apiRequest('GET', '/api/admin/orders');
+  },
+
+  updateAdminOrder: (orderId: string, data: any) => {
+    return apiRequest('PUT', `/api/admin/orders/${orderId}`, data);
+  },
+
 };

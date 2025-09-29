@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction} from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getAstrologicalResponse, generateKundaliSummary } from "./services/gemini";
@@ -39,6 +39,8 @@ declare global {
   }
 }
 
+
+
 declare module 'express-session' {
   interface SessionData {
     userId?: string;
@@ -66,6 +68,7 @@ async function requireAuth(req: any, res: any, next: any) {
     return res.status(500).json({ message: "Authentication error" });
   }
 }
+
 
 async function optionalAuth(req: any, res: any, next: any) {
   if (req.session?.userId) {
@@ -333,15 +336,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Orders API
-  app.get("/api/admin/orders", requireAdmin, async (req, res) => {
-    try {
-      const orders = await storage.getAllOrders();
-      res.json(orders);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "Failed to fetch orders" });
+
+  app.get("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+  try {
+    const order = await storage.getOrderById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
     }
-  });
+    res.json(order);
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    res.status(500).json({ message: "Failed to fetch order details" });
+  }
+});
 
   app.put("/api/admin/orders/:id", requireAdmin, async (req, res) => {
     try {
@@ -359,16 +366,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Orders API
-  app.post("/api/orders", async (req, res) => {
-    try {
-      const orderData = insertOrderSchema.parse(req.body);
-      const order = await storage.createOrder(orderData);
-      res.json(order);
-    } catch (error) {
-      console.error("Error creating order:", error);
-      res.status(500).json({ message: "Failed to create order" });
+  // app.post("/api/orders", async (req, res) => {
+  //   try {
+  //     const orderData = insertOrderSchema.parse(req.body);
+  //     const order = await storage.createOrder(orderData);
+  //     res.json(order);
+  //   } catch (error) {
+  //     console.error("Error creating order:", error);
+  //     res.status(500).json({ message: "Failed to create order" });
+  //   }
+  // });
+  app.post("/api/orders", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    // 1. Get shipping details from the request body
+    const { 
+      name, mobileNumber, addressLine1, addressLine2, 
+      landmark, pincode, city, state, country
+    } = req.body;
+
+    // 2. Validate the new fields
+    const requiredFields = { name, mobileNumber, addressLine1, pincode, city, state, country };
+    for (const [key, value] of Object.entries(requiredFields)) {
+      if (!value) {
+        return res.status(400).json({ message: `Missing required field: ${key}` });
+      }
     }
-  });
+
+    const userCartItems = await storage.getUserCart(userId);
+    if (userCartItems.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    const totalAmount = userCartItems.reduce(
+      (sum, item) => sum + parseFloat(item.product.price) * item.quantity,
+      0
+    );
+
+    // 3. Generate the unique, user-friendly Order Number
+    const orderNumber = `NK_${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    // 4. Create the main Order record with all the new details
+    const newOrder = await storage.createOrder({
+      userId,
+      totalAmount: totalAmount.toFixed(2),
+      status: "new",
+      orderNumber, // Add the new order number
+      shippingName: name,
+      mobileNumber,
+      addressLine1,
+      addressLine2, // Will be null if not provided
+      landmark,     // Will be null if not provided
+      pincode,
+      city,
+      state,
+      country: "India", // Default to India for now
+    });
+
+    // Create OrderItems for each item in the cart (this part is the same)
+    for (const cartItem of userCartItems) {
+      await storage.createOrderItem({
+        orderId: newOrder.id,
+        productId: cartItem.productId,
+        quantity: cartItem.quantity,
+        price: cartItem.product.price,
+      });
+    }
+
+    // Clear the user's cart (this part is the same)
+    await storage.clearUserCart(userId);
+
+    res.status(201).json(newOrder);
+  } catch (error) {
+    console.error("Error creating order:", error);
+    res.status(500).json({ message: "Failed to create order" });
+  }
+});
+
 
   app.post("/api/order-items", async (req, res) => {
     try {

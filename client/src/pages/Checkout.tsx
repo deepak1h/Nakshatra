@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,19 +7,66 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+
 
 
 export default function Checkout() {
   const { cartItems, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  // --- STATE FOR FORM INPUTS ---
+  const [name, setName] = useState(user ? `${user.firstName} ${user.lastName}` : "");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [country, setCountry] = useState("India");
+
+
+  const createOrderMutation = useMutation({
+    mutationFn: (orderData: {
+      name: string; mobileNumber: string; addressLine1: string; addressLine2: string;
+      landmark: string; pincode: string; city: string; state: string; country: string;
+    }) => api.createOrder(orderData),
+    onSuccess: () => {
+      toast({
+        title: "Order Placed! 🚀",
+        description: "Your cosmic order is on its way.",
+      });
+      clearCart(); // Clear local cart state for instant UI update
+      queryClient.invalidateQueries({ queryKey: ["userCart"] }); // Refetch db cart to confirm it's empty
+      setLocation("/dashboard");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Order Failed",
+        description: error.message || "There was an issue placing your order. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handlePlaceOrder = () => {
-    // In a real app, you'd integrate with a payment gateway here.
-    // For this demo, we'll just simulate a successful order.
-    alert("Order placed successfully! (Simulation)");
-    clearCart();
-    setLocation("/dashboard");
+    // Basic validation
+    if (!name || !mobileNumber || !addressLine1 || !pincode || !city || !state || !country) {
+      toast({
+        title: "Incomplete Details",
+        description: "Please fill out all shipping information fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createOrderMutation.mutate({ name, mobileNumber, addressLine1, addressLine2, 
+      landmark, pincode, city, state, country});
   };
 
   if (!user) {
@@ -33,6 +81,7 @@ export default function Checkout() {
     );
   }
 
+
   return (
     <div className="container mx-auto px-6 py-20">
       <h1 className="text-4xl font-bold text-center mb-12">Checkout</h1>
@@ -42,40 +91,61 @@ export default function Checkout() {
             <CardHeader>
               <CardTitle>Shipping Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" defaultValue={user ? `${user.firstName} ${user.lastName}` : ""} />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue={user?.email} />
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" placeholder="123 Cosmic Way" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" placeholder="Astroville" />
+              {/* --- BIND INPUTS TO STATE --- */}
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="mobile">Mobile Number *</Label>
+                    <Input id="mobile" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} />
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="zip">ZIP Code</Label>
-                  <Input id="zip" placeholder="12345" />
+                  <Label htmlFor="address1">Address Line 1 *</Label>
+                  <Input id="address1" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="House No, Building, Street" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                <div>
+                  <Label htmlFor="address2">Address Line 2</Label>
+                  <Input id="address2" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Apartment, suite, etc. (optional)" />
+                </div>
+                <div>
+                  <Label htmlFor="landmark">Landmark</Label>
+                  <Input id="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Near Cosmic Tower (optional)" />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="pincode">Pincode *</Label>
+                    <Input id="pincode" value={pincode} onChange={(e) => setPincode(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="city">City *</Label>
+                    <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="state">State *</Label>
+                    <Input id="state" value={state} onChange={(e) => setState(e.target.value)} />
+                  </div>
+                  <div className="col-span-3">
+                    <Label htmlFor="country">Country *</Label>
+                    <Input id="country" value={country || "India"} readOnly onChange={(e) => setCountry(e.target.value)} />
+                  </div>
+
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         <div>
           <Card>
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* ... The order summary part is fine, no changes needed ... */}
               <div className="space-y-4">
-                {cartItems.map((item) => (
+                {cartItems && cartItems.map((item) => (
                   <div key={item.id} className="flex justify-between items-center">
                     <div>
                       <p className="font-medium">{item.name}</p>
@@ -92,8 +162,14 @@ export default function Checkout() {
                 <p>Total</p>
                 <p>₹{getCartTotal().toFixed(2)}</p>
               </div>
-              <Button onClick={handlePlaceOrder} className="w-full mt-6 cosmic-glow">
-                Place Order (Simulation)
+              
+              {/* --- UPDATE THE BUTTON --- */}
+              <Button 
+                onClick={handlePlaceOrder} 
+                className="w-full mt-6 cosmic-glow"
+                disabled={createOrderMutation.isPending || cartItems.length === 0}
+              >
+                {createOrderMutation.isPending ? "Placing Order..." : "Place Order"}
               </Button>
             </CardContent>
           </Card>
