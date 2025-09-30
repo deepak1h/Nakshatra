@@ -21,6 +21,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import {supabaseAdmin} from "./supabaseAdminClient";
 
 // Session configuration
 const pgStore = connectPg(session);
@@ -211,40 +212,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   
   // Admin Authentication
-  function requireAdmin(req: any, res: any, next: any) {
-    if (!req.session?.isAdmin) {
-      return res.status(401).json({ message: "Admin authentication required" });
+
+  // --- REPLACEMENT for Admin Authentication ---
+
+  // New requireAdmin middleware
+  async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: "Admin authentication required: No token provided" });
     }
-    next();
+    
+    const token = authHeader.split(' ')[1];
+    
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      
+      if (error || !user) {
+        return res.status(401).json({ message: "Admin authentication required: Invalid token" });
+      }
+      
+      // This is the crucial check for the admin role from the JWT!
+      if (user.app_metadata?.role !== 'admin') {
+        return res.status(403).json({ message: "Forbidden: User is not an admin" });
+      }
+
+      // Attach the admin user to the request object for later use
+      (req as any).user = user; 
+      next();
+    } catch (error) {
+      console.error("Admin auth middleware error:", error);
+      return res.status(500).json({ message: "Admin authentication error" });
+    }
   }
 
+  // NEW Admin Login route
   app.post("/api/admin/login", async (req, res) => {
     try {
-      const { username, password } = req.body;
-      
-      // Hardcoded admin credentials
-      if (username === "admin" && password === "admin123") {
-        (req.session as any).isAdmin = true;
-        (req.session as any).adminUsername = username;
-        res.json({ 
-          success: true, 
-          admin: { username: "admin", role: "administrator" } 
-        });
-      } else {
-        res.status(401).json({ message: "Invalid admin credentials" });
+      // Use email instead of username
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
       }
+      
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return res.status(401).json({ message: error.message || "Invalid credentials" });
+      }
+      
+      // Security check: Even with a valid password, ensure they are an admin.
+      if (data.user?.app_metadata?.role !== 'admin') {
+          // Log them out immediately
+          await supabaseAdmin.auth.signOut();
+          return res.status(403).json({ message: "Login successful, but you are not an authorized admin." });
+      }
+      
+      // Send back the session (contains access_token) and user details
+      res.json({ 
+        success: true, 
+        session: data.session,
+        admin: { 
+          email: data.user.email,
+          role: data.user.app_metadata.role,
+          id: data.user.id
+        }
+      });
     } catch (error) {
       console.error("Admin login error:", error);
       res.status(500).json({ message: "Admin login failed" });
     }
   });
 
-  app.post("/api/admin/logout", async (req, res) => {
+  // NEW Admin Logout route
+  app.post("/api/admin/logout", requireAdmin, async (req, res) => {
     try {
-      if (req.session) {
-        (req.session as any).isAdmin = false;
-        (req.session as any).adminUsername = null;
-      }
+      // The token is validated by requireAdmin, now we just sign out.
+      const authHeader = req.headers.authorization!;
+      const token = authHeader.split(' ')[1];
+
+      const { error } = await supabaseAdmin.auth.signOut(token);
+
+      if (error) throw error;
+      
       res.json({ message: "Admin logged out successfully" });
     } catch (error) {
       console.error("Admin logout error:", error);
@@ -252,22 +304,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/me", async (req, res) => {
-    try {
-      if (req.session?.isAdmin) {
-        res.json({ 
-          admin: { 
-            username: req.session.adminUsername || "admin", 
-            role: "administrator" 
-          } 
-        });
-      } else {
-        res.status(401).json({ message: "Not authenticated as admin" });
-      }
-    } catch (error) {
-      console.error("Admin auth check error:", error);
-      res.status(500).json({ message: "Admin auth check failed" });
-    }
+
+  // NEW Admin "me" route
+  app.get("/api/admin/me", requireAdmin, async (req, res) => {
+    // The user object is attached by the requireAdmin middleware
+    const user = (req as any).user;
+    res.json({ 
+      admin: { 
+        email: user.email, 
+        role: user.app_metadata.role,
+        id: user.id
+      } 
+    });
   });
 
 

@@ -86,16 +86,16 @@ export const api = {
   // --- END NEW ---
 
   // Admin
-  getAdminOrderById: (orderId: string) => {
-    return apiRequest('GET', `/api/admin/orders/${orderId}`);
+  getAdminOrderById: (orderId: string, token: string | null) => {
+    return apiRequest('GET', `/api/admin/orders/${orderId}`, token);
   },
 
-  getAdminOrders: () => {
-    return apiRequest('GET', '/api/admin/orders');
+  getAdminOrders: (token: string | null) => {
+    return apiRequest('GET', '/api/admin/orders',token);
   },
 
-  updateAdminOrder: (orderId: string, data: any) => {
-    return apiRequest('PUT', `/api/admin/orders/${orderId}`, data);
+  updateAdminOrder: (orderId: string, data: any, token: string | null) => {
+    return apiRequest('PUT', `/api/admin/orders/${orderId}`, data, token);
   },
 
 };

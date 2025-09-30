@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { type Order, type OrderItem, type Product } from "@shared/schema";
@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Eye, Edit, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { getAdminQueryFn } from '@/lib/queryClient';
+import { useAdmin } from '@/hooks/useAdmin';
 
 
 type OrderWithDetails = Order & { 
@@ -46,9 +48,10 @@ const getStatusColor = (status: string) => {
 };
 
 export default function AdminOrderManagement() {
+  const { session } = useAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [viewingOrder, setViewingOrder] = useState<OrderWithDetails | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [updateData, setUpdateData] = useState({
     status: "",
@@ -61,31 +64,30 @@ export default function AdminOrderManagement() {
 
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
     queryKey: ["adminOrders"],
-    queryFn: async () => {
-      // 1. Await the raw response from your API call
-      const response = await api.getAdminOrders();
 
-      // 2. Check if the response is OK (error handling)
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-      
-      // 3. Parse the JSON and return it. This becomes the `data`.
-      return response.json();
-    },
+        queryFn: getAdminQueryFn(session?.access_token ?? null),
+
+        enabled: !!session?.access_token,
   });
 
-  const { isFetching: isFetchingDetails, refetch: fetchOrderDetails } = useQuery<OrderWithDetails>({
-    queryKey: ["adminOrderDetails", viewingOrder?.id],
-    queryFn: () => api.getAdminOrderById(viewingOrder!.id),
-    enabled: false, // Will only run when we manually call `refetch`
-    onSuccess: (data) => setViewingOrder(data),
+  const { data: orderDetails, isFetching: isFetchingDetails } = useQuery<OrderWithDetails>({
+    // CHANGED: The query key should reflect the specific order ID
+    queryKey: ["adminOrderDetails", viewingOrder?.id], 
+    // CHANGED: Use the getAdminQueryFn here as well
+    queryFn: getAdminQueryFn(session?.access_token ?? null),
+    // CHANGED: Use the declarative `enabled` pattern. This query will automatically run
+    // when `viewingOrder` is set to an object, and won't run if it's null.
+    enabled: !!viewingOrder?.id && !!session?.access_token,
   });
 
   const updateOrderMutation = useMutation({
-    mutationFn: ({ orderId, data }: { orderId: string, data: any }) => api.updateAdminOrder(orderId, data),
-    onSuccess: () => {
+    // CHANGED: Pass the access token to the api function
+    mutationFn: ({ orderId, data }: { orderId: string, data: any }) => 
+      api.updateAdminOrder(orderId, data, session?.access_token ?? null),
+    onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: ["adminOrders"] });
+      // Also update the specific order details if it's being viewed
+      queryClient.invalidateQueries({ queryKey: ["adminOrderDetails", updatedOrder.id] });
       toast({ title: "Order Updated Successfully!" });
       setEditingOrder(null);
     },
@@ -96,8 +98,7 @@ export default function AdminOrderManagement() {
 
   const handleViewClick = (order: Order) => {
     setViewingOrder(order as OrderWithDetails);
-    // This will trigger the useQuery to fetch details
-    setTimeout(() => fetchOrderDetails(), 0);
+
   };
   
   const handleEditClick = (order: Order) => {
@@ -207,34 +208,39 @@ export default function AdminOrderManagement() {
       </Card>
 
       {/* View Order Details Modal */}
+
+
+      {/* View Order Details Modal */}
       <Dialog open={!!viewingOrder} onOpenChange={() => setViewingOrder(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Order Details: {viewingOrder?.orderNumber}</DialogTitle>
+            <DialogTitle>Order Details: {orderDetails?.orderNumber ?? viewingOrder?.orderNumber}</DialogTitle>
             <DialogDescription>Full order and shipping information.</DialogDescription>
           </DialogHeader>
           {isFetchingDetails ? <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin" /></div> :
-            <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto pr-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><h4 className="font-semibold">Shipping To:</h4><p>{viewingOrder?.shippingName}<br/>{viewingOrder?.mobileNumber}</p></div>
-                <div><h4 className="font-semibold">Address:</h4><p>{viewingOrder?.addressLine1}<br/>{viewingOrder?.addressLine2}<br/>{viewingOrder?.landmark}<br/>{viewingOrder?.city}, {viewingOrder?.state} - {viewingOrder?.pincode}</p></div>
-              </div>
-              <Separator />
-              <div><h4 className="font-semibold mb-2">Items Ordered:</h4>
-                <div className="space-y-2">
-                  {viewingOrder?.orderItems?.map(item => (
-                    <div key={item.id} className="flex justify-between items-center text-sm">
-                      <p>{item.product.name} (x{item.quantity})</p>
-                      <p>₹{(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
+            orderDetails ? (
+              <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto pr-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><h4 className="font-semibold">Shipping To:</h4><p>{orderDetails.shippingName}<br/>{orderDetails.mobileNumber}</p></div>
+                  <div><h4 className="font-semibold">Address:</h4><p>{orderDetails.addressLine1}<br/>{orderDetails.addressLine2}<br/>{orderDetails.landmark}<br/>{orderDetails.city}, {orderDetails.state} - {orderDetails.pincode}</p></div>
+                </div>
+                <Separator />
+                <div><h4 className="font-semibold mb-2">Items Ordered:</h4>
+                  <div className="space-y-2">
+                    {orderDetails.orderItems?.map(item => (
+                      <div key={item.id} className="flex justify-between items-center text-sm">
+                        <p>{item.product.name} (x{item.quantity})</p>
+                        <p>₹{(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
+                      </div>
+                    ))}
+                    <Separator className="my-2"/>
+                    <div className="flex justify-between font-bold">
+                      <p>Total</p><p>₹{orderDetails.totalAmount}</p>
                     </div>
-                  ))}
-                  <Separator className="my-2"/>
-                  <div className="flex justify-between font-bold">
-                    <p>Total</p><p>₹{viewingOrder?.totalAmount}</p>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : <div className="py-10 text-center text-muted-foreground">No details found.</div>
           }
         </DialogContent>
       </Dialog>

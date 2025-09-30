@@ -1,52 +1,66 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 
+interface AdminSession {
+  access_token: string;
+  // include other session properties if needed
+}
+interface AdminUser {
+  email: string;
+  role: string;
+  id: string;
+}
+
 interface AdminContextType {
-  admin: { username: string; role: string } | null;
+  admin: AdminUser | null;
+  session: AdminSession | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  refreshAdmin: () => Promise<void>;
 }
 
 const AdminContext = createContext<AdminContextType | null>(null);
+const ADMIN_SESSION_KEY = 'supabase.admin.session';
 
-interface AdminProviderProps {
-  children: React.ReactNode;
-}
 
-export function AdminProvider({ children }: AdminProviderProps) {
-  const [admin, setAdmin] = useState<{ username: string; role: string } | null>(null);
+
+export function AdminProvider({ children }: { children: React.ReactNode }) {
+  const [admin, setAdmin] = useState<AdminUser | null>(null);
+  const [session, setSession] = useState<AdminSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshAdmin = async () => {
+  useEffect(() => {
+    // On initial load, try to load session from localStorage
     try {
-      const response = await fetch('/api/admin/me');
-      if (response.ok) {
-        const { admin } = await response.json();
-        setAdmin(admin);
-      } else {
-        setAdmin(null);
+      const storedSession = localStorage.getItem(ADMIN_SESSION_KEY);
+      if (storedSession) {
+        const parsed = JSON.parse(storedSession);
+        setSession(parsed.session);
+        setAdmin(parsed.admin);
       }
     } catch (error) {
-      setAdmin(null);
+      console.error("Failed to parse admin session from localStorage", error);
+      localStorage.removeItem(ADMIN_SESSION_KEY);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setAdmin(data.admin);
+        setSession(data.session);
+        // Persist the session and user info
+        localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ admin: data.admin, session: data.session }));
         return { success: true };
       } else {
         return { success: false, error: data.message || 'Admin login failed' };
@@ -57,26 +71,31 @@ export function AdminProvider({ children }: AdminProviderProps) {
   };
 
   const logout = async () => {
+    if (!session) return;
     try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      setAdmin(null);
+      await fetch('/api/admin/logout', { 
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
     } catch (error) {
-      console.error('Admin logout error:', error);
+      console.error('Admin logout API call failed:', error);
+    } finally {
+      // Always clear local state and storage regardless of API call success
       setAdmin(null);
+      setSession(null);
+      localStorage.removeItem(ADMIN_SESSION_KEY);
     }
   };
 
-  useEffect(() => {
-    refreshAdmin();
-  }, []);
-
   const contextValue: AdminContextType = {
     admin,
+    session,
     isLoading,
-    isAuthenticated: !!admin,
+    isAuthenticated: !!admin && !!session,
     login,
     logout,
-    refreshAdmin,
   };
 
   return (
