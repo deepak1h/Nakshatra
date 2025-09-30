@@ -49,13 +49,16 @@ export interface IStorage {
   getProductsByCategory(category: string): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: string, updates: Partial<Product>): Promise<Product | undefined>;
+  deleteProduct(id: string): Promise<void>;
   updateProductStock(id: string, stock: number): Promise<void>;
   
   // Order operations
   createOrder(order: InsertOrder): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   getOrdersByUser(userId: string): Promise<Order[]>;
-  updateOrderStatus(id: string, status: string): Promise<void>;
+  getAllOrders(): Promise<Order[]>;
+  updateOrderStatus(id: string, status: string, trackingId?: string, courierPartner?: string, description?: string): Promise<Order | undefined>;
   
   // Kundali operations
   createKundaliRequest(request: InsertKundaliRequest): Promise<KundaliRequest>;
@@ -151,6 +154,20 @@ export class DatabaseStorage implements IStorage {
     return product;
   }
 
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product | undefined> {
+    const [product] = await db.update(products)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return product;
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    await db.update(products)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(products.id, id));
+  }
+
   async updateProductStock(id: string, stock: number): Promise<void> {
     await db.update(products).set({ stock }).where(eq(products.id, id));
   }
@@ -174,8 +191,36 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(orders.createdAt));
   }
 
-  async updateOrderStatus(id: string, status: string): Promise<void> {
-    await db.update(orders).set({ status }).where(eq(orders.id, id));
+  async getAllOrders(): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async updateOrderStatus(id: string, status: string, trackingId?: string, courierPartner?: string, description?: string): Promise<Order | undefined> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    // Note: These fields would need to be added to the orders schema to fully support tracking
+    // For now, we'll just update the status
+    if (trackingId) {
+      // updateData.trackingId = trackingId; // Would need schema update
+    }
+    if (courierPartner) {
+      // updateData.courierPartner = courierPartner; // Would need schema update  
+    }
+    if (description) {
+      // updateData.description = description; // Would need schema update
+    }
+
+    const [order] = await db.update(orders)
+      .set(updateData)
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
   }
 
   // Kundali operations

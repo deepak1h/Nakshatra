@@ -4,6 +4,16 @@
 
 Nakshatra is a comprehensive full-stack astrology web application that combines traditional Vedic astrology with modern technology. The platform offers personalized Kundali (birth chart) readings, an e-commerce store for celestial products, and an AI-powered astrological chatbot. Built with a cosmic-themed design featuring deep blues, purples, and golds, the application provides users with spiritual guidance and astrological insights through multiple service channels.
 
+## Recent Changes
+
+**September 28, 2025**: Successfully imported and configured for Replit environment
+- Migrated database configuration from Neon serverless to local PostgreSQL
+- Fixed SSL certificate issues in database connectivity  
+- Configured Vite dev server to work with Replit proxy (host: 0.0.0.0, port: 5000)
+- Set up development workflow for seamless frontend/backend integration
+- Configured deployment settings for production (VM target)
+- All API endpoints verified working (products, auth, promotional banners)
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

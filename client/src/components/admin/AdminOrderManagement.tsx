@@ -1,12 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { type Order, type OrderItem, type Product } from "@shared/schema";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -26,8 +29,10 @@ const orderStatuses = [
   { value: "new", label: "New" },
   { value: "in_queue", label: "In Queue" },
   { value: "in_progress", label: "In Progress" },
+
   { value: "Shipped", label: "Shipped" },
   { value: "Delivered", label: "Delivered" },
+
 ];
 
 const getStatusColor = (status: string) => {
@@ -38,9 +43,11 @@ const getStatusColor = (status: string) => {
       return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
     case "in_progress":
       return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+
     case "Shipped":
       return "bg-purple-500/10 text-purple-500 border-purple-500/20";
     case "Delivered":
+
       return "bg-green-500/10 text-green-500 border-green-500/20";
     default:
       return "bg-gray-500/10 text-gray-500 border-gray-500/20";
@@ -48,6 +55,7 @@ const getStatusColor = (status: string) => {
 };
 
 export default function AdminOrderManagement() {
+
   const { session } = useAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -121,9 +129,11 @@ export default function AdminOrderManagement() {
     const matchesSearch = 
       order.orderNumber.toLowerCase().includes(searchLower) ||
       order.shippingName.toLowerCase().includes(searchLower);
+
     const matchesStatus = selectedStatus === "all" || order.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
+
 
   const stats = {
     new: orders.filter(o => o.status === 'new').length,
@@ -145,6 +155,7 @@ export default function AdminOrderManagement() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-accent mb-2">Order Management</h1>
+
         <p className="text-muted-foreground">Track, view, and update customer orders and shipping details.</p>
       </div>
 
@@ -165,18 +176,22 @@ export default function AdminOrderManagement() {
             </div>
             <div className="w-full md:w-48">
               <Select value={selectedStatus} onValueChange={setSelectedStatus}><SelectTrigger><SelectValue placeholder="Filter by status" /></SelectTrigger><SelectContent>{orderStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
+
             </div>
           </div>
         </CardContent>
       </Card>
 
+
       <Card className="border-border/50">
         <CardHeader><CardTitle>Orders ({filteredOrders.length})</CardTitle></CardHeader>
+
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border/50">
+
                   <th className="text-left p-4 font-medium">Order #</th>
                   <th className="text-left p-4 font-medium">Customer</th>
                   <th className="text-left p-4 font-medium">Amount</th>
@@ -188,6 +203,7 @@ export default function AdminOrderManagement() {
               <tbody>
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="border-b border-border/50 hover:bg-muted/50">
+
                     <td className="p-4 font-medium">{order.orderNumber}</td>
                     <td className="p-4">{order.shippingName}</td>
                     <td className="p-4 font-medium">₹{order.totalAmount}</td>
@@ -197,6 +213,7 @@ export default function AdminOrderManagement() {
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" onClick={() => handleViewClick(order)}><Eye className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(order)}><Edit className="w-4 h-4" /></Button>
+
                       </div>
                     </td>
                   </tr>
@@ -206,6 +223,7 @@ export default function AdminOrderManagement() {
           </div>
         </CardContent>
       </Card>
+
 
       {/* View Order Details Modal */}
 
@@ -410,3 +428,4 @@ export default function AdminOrderManagement() {
   //   </div>
   // );
 //}
+

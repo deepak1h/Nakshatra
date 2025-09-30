@@ -1,5 +1,10 @@
 import { useState } from "react";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/contexts/CartContext";
@@ -174,9 +179,12 @@ export default function CelestialStore() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
             {products.map((product: Product) => (
+
               <Card key={product.id} className="product-card border border-border overflow-hidden flex flex-col">
                 <div className="relative">
                   <Link href={`/product/${product.id}`}>
+
+
                   <img 
                     src={product.imageUrl || "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300"} 
                     alt={product.name} 
@@ -201,6 +209,7 @@ export default function CelestialStore() {
                     <Button
                       onClick={() => handleAddToCart(product)}
                       className="font-medium transition-all"
+
                       data-testid={`button-add-to-cart-${product.id}`}
                     >
                       Add to Cart

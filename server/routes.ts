@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getAstrologicalResponse, generateKundaliSummary } from "./services/gemini";
 import { 
-  insertProductSchema, 
+  insertProductSchema,
+  updateProductSchema,
   insertOrderSchema, 
   insertKundaliRequestSchema, 
   insertChatMessageSchema, 
@@ -41,7 +42,6 @@ declare global {
 }
 
 
-
 declare module 'express-session' {
   interface SessionData {
     userId?: string;
@@ -49,7 +49,6 @@ declare module 'express-session' {
     adminUsername?: string;
   }
 }
-
 
 async function requireAuth(req: any, res: any, next: any) {
   if (!req.session?.userId) {
@@ -210,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  
+
   // Admin Authentication
 
   // --- REPLACEMENT for Admin Authentication ---
@@ -280,11 +279,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: data.user.id
         }
       });
+
     } catch (error) {
       console.error("Admin login error:", error);
       res.status(500).json({ message: "Admin login failed" });
     }
   });
+
 
   // NEW Admin Logout route
   app.post("/api/admin/logout", requireAdmin, async (req, res) => {
@@ -297,6 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (error) throw error;
       
+
       res.json({ message: "Admin logged out successfully" });
     } catch (error) {
       console.error("Admin logout error:", error);
@@ -346,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  
+
   // Admin Products API
   app.post("/api/admin/products", requireAdmin, async (req, res) => {
     try {
@@ -399,6 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 });
 
   app.put("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+
     try {
       const { status, trackingId, courierPartner, description } = req.body;
       const order = await storage.updateOrderStatus(req.params.id, status, trackingId, courierPartner, description);

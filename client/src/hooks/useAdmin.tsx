@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 
+
 interface AdminSession {
   access_token: string;
   // include other session properties if needed
@@ -47,20 +48,25 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
+
     try {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+
         body: JSON.stringify({ email, password }),
+
       });
 
       const data = await response.json();
+
 
       if (response.ok && data.success) {
         setAdmin(data.admin);
         setSession(data.session);
         // Persist the session and user info
         localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ admin: data.admin, session: data.session }));
+
         return { success: true };
       } else {
         return { success: false, error: data.message || 'Admin login failed' };
@@ -71,6 +77,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+
     if (!session) return;
     try {
       await fetch('/api/admin/logout', { 
@@ -96,6 +103,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!admin && !!session,
     login,
     logout,
+
   };
 
   return (
