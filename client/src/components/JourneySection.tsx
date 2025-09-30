@@ -54,11 +54,11 @@ export default function JourneySection() {
           </div>
           <div className="space-y-6">
             <h3 className="text-3xl font-serif font-semibold star-pattern">
-              Dr. Mukund Murari Pandey
+              Dr. Mukund Murarai Pandey
             </h3>
 
             <p className="text-muted-foreground text-lg leading-relaxed">
-              With over 40 years of dedicated practice in Vedic astrology, I have guided
+              With over 45 years of dedicated practice in Vedic astrology, I have guided
               more than 35,000 individuals on their life journeys. Rooted in the timeless
               wisdom of the ancient scriptures, my mission has always been to illuminate
               the path of seekers with clarity, compassion, and truth.
@@ -74,7 +74,7 @@ export default function JourneySection() {
 
             <div className="flex flex-wrap gap-4 mt-8">
               <div className="bg-accent/20 px-4 py-2 rounded-full">
-                <span className="text-accent font-medium">40+ Years Experience</span>
+                <span className="text-accent font-medium">45+ Years Experience</span>
               </div>
               <div className="bg-secondary/20 px-4 py-2 rounded-full">
                 <span className="text-secondary font-medium">35,000+ Consultations</span>
