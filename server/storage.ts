@@ -96,6 +96,9 @@ export interface IStorage {
   getUserBySessionToken(sessionToken: string): Promise<User | undefined>;
   deleteUserSession(sessionToken: string): Promise<void>;
   deleteExpiredSessions(): Promise<void>;
+
+  // Admin operations (if any)
+  getOrderById(orderId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -271,6 +274,7 @@ export class DatabaseStorage implements IStorage {
 
   // Liked products operations
   async addLikedProduct(userId: string, productId: string): Promise<LikedProduct> {
+    console.log("liked product", userId, productId)
     const [likedProduct] = await db
       .insert(likedProducts)
       .values({ userId, productId })
@@ -317,6 +321,8 @@ export class DatabaseStorage implements IStorage {
   // User cart operations
   async addToUserCart(userId: string, productId: string, quantity: number): Promise<UserCart> {
     // Check if item already exists in cart
+
+    console.log("add to cart", userId, productId, quantity)
     const [existing] = await db
       .select()
       .from(userCart)
@@ -469,6 +475,34 @@ export class DatabaseStorage implements IStorage {
   async deleteExpiredSessions(): Promise<void> {
     await db.delete(userSessions).where(lt(userSessions.expiresAt, new Date()));
   }
+
+  // Admin operations (if any)
+  async getOrderById(orderId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined> {
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId));
+
+    if (!order) {
+      return undefined;
+    }
+
+    const items = await db
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId))
+      .innerJoin(products, eq(orderItems.productId, products.id));
+
+    return {
+      ...order,
+      orderItems: items.map(item => ({
+        ...item.order_items,
+        product: item.products
+      }))
+    };
+  }
+
+  
 }
 
 export const storage = new DatabaseStorage();

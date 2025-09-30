@@ -9,7 +9,9 @@ import { ArrowLeft, Lock, User } from "lucide-react";
 import { Link } from "wouter";
 
 export default function AdminLogin() {
-  const [username, setUsername] = useState("");
+
+  const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAdmin();
@@ -20,7 +22,9 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      const result = await login(username, password);
+
+      const result = await login(email, password);
+
       if (result.success) {
         toast({
           title: "Welcome, Administrator! 🔑",
@@ -74,11 +78,11 @@ export default function AdminLogin() {
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="username"
+                    id="email"
                     type="text"
-                    placeholder="Enter admin username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter admin email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
                     required
                   />

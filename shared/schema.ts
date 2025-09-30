@@ -14,6 +14,7 @@ import {
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { count } from "console";
 
 // Users table
 export const users = pgTable("users", {
@@ -52,10 +53,26 @@ export const orders = pgTable("orders", {
   userId: uuid("user_id").references(() => users.id),
   status: varchar("status", { length: 50 }).default("pending"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  shippingAddress: jsonb("shipping_address"),
-  paymentStatus: varchar("payment_status", { length: 50 }).default("pending"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  orderNumber: text("order_number").notNull().unique(),
+
+  // --- NEW & UPDATED: Shipping Details ---
+  shippingName: text("shipping_name").notNull(),
+  mobileNumber: text("mobile_number").notNull(),
+  addressLine1: text("address_line_1").notNull(),
+  addressLine2: text("address_line_2"), // Optional field
+  landmark: text("landmark"),             // Optional field
+  pincode: text("pincode").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  country: text("country").notNull(),
+
+  // --- Tracking info ---
+  trackingId: text("tracking_id"),
+  courierPartner: text("courier_partner"),
+  description: text("description"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Order items table

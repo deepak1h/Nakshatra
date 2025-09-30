@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction} from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getAstrologicalResponse, generateKundaliSummary } from "./services/gemini";
@@ -22,6 +22,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import {supabaseAdmin} from "./supabaseAdminClient";
 
 // Session configuration
 const pgStore = connectPg(session);
@@ -39,6 +40,7 @@ declare global {
     }
   }
 }
+
 
 declare module 'express-session' {
   interface SessionData {
@@ -66,6 +68,7 @@ async function requireAuth(req: any, res: any, next: any) {
     return res.status(500).json({ message: "Authentication error" });
   }
 }
+
 
 async function optionalAuth(req: any, res: any, next: any) {
   if (req.session?.userId) {
@@ -206,41 +209,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   // Admin Authentication
-  function requireAdmin(req: any, res: any, next: any) {
-    if (!req.session?.isAdmin) {
-      return res.status(401).json({ message: "Admin authentication required" });
+
+  // --- REPLACEMENT for Admin Authentication ---
+
+  // New requireAdmin middleware
+  async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: "Admin authentication required: No token provided" });
     }
-    next();
+    
+    const token = authHeader.split(' ')[1];
+    
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      
+      if (error || !user) {
+        return res.status(401).json({ message: "Admin authentication required: Invalid token" });
+      }
+      
+      // This is the crucial check for the admin role from the JWT!
+      if (user.app_metadata?.role !== 'admin') {
+        return res.status(403).json({ message: "Forbidden: User is not an admin" });
+      }
+
+      // Attach the admin user to the request object for later use
+      (req as any).user = user; 
+      next();
+    } catch (error) {
+      console.error("Admin auth middleware error:", error);
+      return res.status(500).json({ message: "Admin authentication error" });
+    }
   }
 
+  // NEW Admin Login route
   app.post("/api/admin/login", async (req, res) => {
     try {
-      const { username, password } = req.body;
-      
-      // Hardcoded admin credentials
-      if (username === "admin" && password === "admin123") {
-        (req.session as any).isAdmin = true;
-        (req.session as any).adminUsername = username;
-        res.json({ 
-          success: true, 
-          admin: { username: "admin", role: "administrator" } 
-        });
-      } else {
-        res.status(401).json({ message: "Invalid admin credentials" });
+      // Use email instead of username
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
       }
+      
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return res.status(401).json({ message: error.message || "Invalid credentials" });
+      }
+      console.log("Admin logged in:", data.user);
+      // Security check: Even with a valid password, ensure they are an admin.
+      if (data.user?.app_metadata?.role !== 'admin') {
+          // Log them out immediately
+          await supabaseAdmin.auth.signOut();
+          return res.status(403).json({ message: "Login successful, but you are not an authorized admin." });
+      }
+      
+      // Send back the session (contains access_token) and user details
+      res.json({ 
+        success: true, 
+        session: data.session,
+        admin: { 
+          email: data.user.email,
+          role: data.user.app_metadata.role,
+          id: data.user.id
+        }
+      });
+
     } catch (error) {
       console.error("Admin login error:", error);
       res.status(500).json({ message: "Admin login failed" });
     }
   });
 
-  app.post("/api/admin/logout", async (req, res) => {
+
+  // NEW Admin Logout route
+  app.post("/api/admin/logout", requireAdmin, async (req, res) => {
     try {
-      if (req.session) {
-        (req.session as any).isAdmin = false;
-        (req.session as any).adminUsername = null;
-      }
+      // The token is validated by requireAdmin, now we just sign out.
+      const authHeader = req.headers.authorization!;
+      const token = authHeader.split(' ')[1];
+
+      const { error } = await supabaseAdmin.auth.signOut(token);
+
+      if (error) throw error;
+      
+
       res.json({ message: "Admin logged out successfully" });
     } catch (error) {
       console.error("Admin logout error:", error);
@@ -248,23 +306,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/me", async (req, res) => {
-    try {
-      if (req.session?.isAdmin) {
-        res.json({ 
-          admin: { 
-            username: req.session.adminUsername || "admin", 
-            role: "administrator" 
-          } 
-        });
-      } else {
-        res.status(401).json({ message: "Not authenticated as admin" });
-      }
-    } catch (error) {
-      console.error("Admin auth check error:", error);
-      res.status(500).json({ message: "Admin auth check failed" });
-    }
+
+  // NEW Admin "me" route
+  app.get("/api/admin/me", requireAdmin, async (req, res) => {
+    // The user object is attached by the requireAdmin middleware
+    const user = (req as any).user;
+    res.json({ 
+      admin: { 
+        email: user.email, 
+        role: user.app_metadata.role,
+        id: user.id
+      } 
+    });
   });
+
 
   // Products API
   app.get("/api/products", async (req, res) => {
@@ -292,6 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch product" });
     }
   });
+
 
   // Admin Products API
   app.post("/api/admin/products", requireAdmin, async (req, res) => {
@@ -330,17 +386,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Orders API
-  app.get("/api/admin/orders", requireAdmin, async (req, res) => {
-    try {
-      const orders = await storage.getAllOrders();
-      res.json(orders);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "Failed to fetch orders" });
+
+  app.get("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+  try {
+    const order = await storage.getOrderById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
     }
-  });
+    res.json(order);
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    res.status(500).json({ message: "Failed to fetch order details" });
+  }
+});
 
   app.put("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+
     try {
       const { status, trackingId, courierPartner, description } = req.body;
       const order = await storage.updateOrderStatus(req.params.id, status, trackingId, courierPartner, description);
@@ -354,17 +415,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   // Orders API
-  app.post("/api/orders", async (req, res) => {
-    try {
-      const orderData = insertOrderSchema.parse(req.body);
-      const order = await storage.createOrder(orderData);
-      res.json(order);
-    } catch (error) {
-      console.error("Error creating order:", error);
-      res.status(500).json({ message: "Failed to create order" });
+  // app.post("/api/orders", async (req, res) => {
+  //   try {
+  //     const orderData = insertOrderSchema.parse(req.body);
+  //     const order = await storage.createOrder(orderData);
+  //     res.json(order);
+  //   } catch (error) {
+  //     console.error("Error creating order:", error);
+  //     res.status(500).json({ message: "Failed to create order" });
+  //   }
+  // });
+  app.post("/api/orders", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    // 1. Get shipping details from the request body
+    const { 
+      name, mobileNumber, addressLine1, addressLine2, 
+      landmark, pincode, city, state, country
+    } = req.body;
+
+    // 2. Validate the new fields
+    const requiredFields = { name, mobileNumber, addressLine1, pincode, city, state, country };
+    for (const [key, value] of Object.entries(requiredFields)) {
+      if (!value) {
+        return res.status(400).json({ message: `Missing required field: ${key}` });
+      }
     }
-  });
+
+    const userCartItems = await storage.getUserCart(userId);
+    if (userCartItems.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    const totalAmount = userCartItems.reduce(
+      (sum, item) => sum + parseFloat(item.product.price) * item.quantity,
+      0
+    );
+
+    // 3. Generate the unique, user-friendly Order Number
+    const orderNumber = `NK_${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    // 4. Create the main Order record with all the new details
+    const newOrder = await storage.createOrder({
+      userId,
+      totalAmount: totalAmount.toFixed(2),
+      status: "new",
+      orderNumber, // Add the new order number
+      shippingName: name,
+      mobileNumber,
+      addressLine1,
+      addressLine2, // Will be null if not provided
+      landmark,     // Will be null if not provided
+      pincode,
+      city,
+      state,
+      country: "India", // Default to India for now
+    });
+
+    // Create OrderItems for each item in the cart (this part is the same)
+    for (const cartItem of userCartItems) {
+      await storage.createOrderItem({
+        orderId: newOrder.id,
+        productId: cartItem.productId,
+        quantity: cartItem.quantity,
+        price: cartItem.product.price,
+      });
+    }
+
+    // Clear the user's cart (this part is the same)
+    await storage.clearUserCart(userId);
+
+    res.status(201).json(newOrder);
+  } catch (error) {
+    console.error("Error creating order:", error);
+    res.status(500).json({ message: "Failed to create order" });
+  }
+});
+
 
   app.post("/api/order-items", async (req, res) => {
     try {
@@ -378,10 +507,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Kundali API
-  app.post("/api/kundali", async (req, res) => {
+  app.post("/api/kundali", requireAuth, async (req, res) => {
     try {
       const kundaliData = insertKundaliRequestSchema.parse(req.body);
-      const request = await storage.createKundaliRequest(kundaliData);
+      const request = await storage.createKundaliRequest({
+        ...kundaliData,
+        userId: req.user!.id,
+      });
       
       // Generate AI summary for the request
       try {
@@ -542,6 +674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required" });
       }
+      console.log("ROUTES: Adding liked product:", productId);
 
       const likedProduct = await storage.addLikedProduct(req.user!.id, productId);
       res.json(likedProduct);
@@ -585,6 +718,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/user/cart", requireAuth, async (req, res) => {
     try {
       const { productId, quantity = 1 } = req.body;
+      console.log("ROUTES: Adding to cart:", productId, quantity);
+
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required" });
       }
