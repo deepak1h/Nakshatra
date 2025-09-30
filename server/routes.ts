@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         return res.status(401).json({ message: error.message || "Invalid credentials" });
       }
-      
+      console.log("Admin logged in:", data.user);
       // Security check: Even with a valid password, ensure they are an admin.
       if (data.user?.app_metadata?.role !== 'admin') {
           // Log them out immediately
