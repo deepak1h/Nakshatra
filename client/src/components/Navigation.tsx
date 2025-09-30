@@ -5,13 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 
 export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { cartItems } = useCart();
+  const { cartItems, setIsCartOpen } = useCart();
   const { user, isAuthenticated, logout, isLoading } = useAuth();
-  const [location, setLocation] = useLocation();
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
@@ -22,10 +21,6 @@ export default function Navigation() {
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
-    if (location !== "/") {
-      setLocation("/"); // go home first
-      return;
-    }
     if (element) {
       const offsetTop = element.offsetTop - 80;
       window.scrollTo({
@@ -35,8 +30,6 @@ export default function Navigation() {
     }
     setIsMobileMenuOpen(false);
   };
-
-  
 
   return (
     <nav className="floating-nav fixed top-0 left-0 right-0 z-50 px-6 py-4">
@@ -93,16 +86,18 @@ export default function Navigation() {
         </div>
         
         <div className="flex items-center space-x-4">
-          <Link href="/checkout">
-            <a className="relative" data-testid="button-cart">
-              <ShoppingCart className="text-xl text-foreground hover:text-accent transition-colors" />
-              {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                  {cartItemCount}
-                </span>
-              )}
-            </a>
-          </Link>
+          <button 
+            className="relative"
+            onClick={() => setIsCartOpen(true)}
+            data-testid="button-cart"
+          >
+            <ShoppingCart className="text-xl text-foreground hover:text-accent transition-colors" />
+            {cartItemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                {cartItemCount}
+              </span>
+            )}
+          </button>
           {/* User Authentication */}
           {isLoading ? (
             <div className="w-8 h-8 animate-pulse bg-accent/20 rounded-full" />

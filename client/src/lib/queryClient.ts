@@ -2,15 +2,8 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    // Try to parse JSON error first, then fallback to text
-    let errorBody;
-    try {
-      errorBody = await res.json();
-    } catch {
-      errorBody = await res.text();
-    }
-    const errorMessage = errorBody?.message || (typeof errorBody === 'string' ? errorBody : res.statusText);
-    throw new Error(`${res.status}: ${errorMessage}`);
+    const text = (await res.text()) || res.statusText;
+    throw new Error(`${res.status}: ${text}`);
   }
 }
 
@@ -18,30 +11,16 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-  token?: string | null,
-): Promise<any> {
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json'
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
+): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers,
+    headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
 
   await throwIfResNotOk(res);
-  // Handle cases where the response might be empty (e.g., DELETE 204 No Content)
-  if (res.status === 204) {
-    return; 
-  }
-  return res.json();
+  return res;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -57,23 +36,6 @@ export const getQueryFn: <T>(options: {
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
-
-export const getAdminQueryFn = <T>(token: string | null): QueryFunction<T> => 
-  async ({ queryKey }) => {
-    if (!token) {
-      // Or handle this more gracefully depending on your app's needs
-      throw new Error("Admin token not provided for authenticated query.");
-    }
-
-    const res = await fetch(queryKey.join("/") as string, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
 
     await throwIfResNotOk(res);
     return await res.json();
