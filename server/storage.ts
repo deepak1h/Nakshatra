@@ -478,6 +478,7 @@ export class DatabaseStorage implements IStorage {
 
   // Admin operations (if any)
   async getOrderById(orderId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined> {
+    console.log("Fetching order by ID:", orderId);
     const [order] = await db
       .select()
       .from(orders)

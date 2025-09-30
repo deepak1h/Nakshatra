@@ -21,6 +21,8 @@ export async function apiRequest(
   token?: string | null,
 ): Promise<any> {
 
+
+  
   const headers: HeadersInit = {
     'Content-Type': 'application/json'
   };
@@ -35,6 +37,41 @@ export async function apiRequest(
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
+
+  const responseText = await res.text();
+
+  if (!res.ok) {
+      console.error("--------------------- API REQUEST FAILED ---------------------");
+      console.error(`HTTP Status: ${res.status} (${res.statusText})`);
+      console.error("URL:", url);
+      console.error("Response Body (HTML or Error Message):");
+      // Log the full HTML or text response from the server
+      console.error(responseText);
+      console.error("----------------------------------------------------------");
+      
+      // Throw an error to be caught by React Query
+      throw new Error(`Request failed with status ${res.status}`);
+    }
+
+    try {
+      return JSON.parse(responseText);
+    } catch (e) {
+      // This block will run if the server returned a 200 OK status, but the body was HTML, not JSON
+      console.error("--------------------- JSON PARSING FAILED ---------------------");
+      console.error("The server responded with a 200 OK status, but the response was not valid JSON. This is likely a proxy or routing issue.");
+      console.error("URL:", url);
+      console.error("Response Body (HTML):");
+      // Log the full HTML response
+      console.error(responseText);
+      console.error("-----------------------------------------------------------");
+      
+      // Re-throw the original parsing error so React Query knows it failed
+      throw e;
+    }
+
+  
+
+
 
   await throwIfResNotOk(res);
   // Handle cases where the response might be empty (e.g., DELETE 204 No Content)

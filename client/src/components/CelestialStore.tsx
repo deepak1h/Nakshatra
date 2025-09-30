@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import { Product } from "@shared/schema";
 import { Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
-import { Link } from "wouter";
+
 
 const categories = [
   { id: "all", name: "All Products" },

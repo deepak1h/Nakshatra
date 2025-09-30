@@ -174,6 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     try {
       const { password, ...userWithoutPassword } = req.user!;
+      console.log("Authenticated user:");
       res.json({ user: userWithoutPassword });
     } catch (error) {
       console.error("Get user error:", error);
@@ -386,6 +387,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Orders API
+
+  
+app.get("/api/admin/orders", requireAdmin, async (req, res) => {
+  try {
+    // You will need a function in your storage to get all orders.
+    // The implementation of this function depends on your database.
+    const orders = await storage.getAllOrders(); 
+    res.json(orders);
+  } catch (error) {
+    console.error("Error fetching all orders:", error);
+    res.status(500).json({ message: "Failed to fetch orders" });
+  }
+});
 
   app.get("/api/admin/orders/:id", requireAdmin, async (req, res) => {
   try {
