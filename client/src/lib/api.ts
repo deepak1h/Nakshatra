@@ -1,6 +1,6 @@
 // src/lib/api.ts
 
-import { apiRequest } from "./queryClient";
+import { apiRequest, apiRequestWithFile } from "./queryClient";
 
 // A helper for simple GET requests that expect JSON
 const fetchJson = (url: string) => fetch(url).then(res => res.json());
@@ -98,5 +98,27 @@ export const api = {
   updateAdminOrder: (orderId: string, data: any, token: string | null) => {
     return apiRequest('PUT', `/api/admin/orders/${orderId}`, data, token);
   },
+
+// Your existing getAdminProducts function (already fixed)
+getAdminProducts: (token: string | null) => {
+  return apiRequest('GET', '/api/admin/products', null, token);
+},
+
+// Add the token parameter to the create function
+createAdminProduct: (productData: any, token: string | null) => {
+  return apiRequestWithFile('POST', '/api/admin/products', productData, token);
+},
+
+// Add the token parameter to the update function
+updateAdminProduct: (productId: string, productData: any, token: string | null) => {
+  console.log("xyz product with data:", productData);
+  return apiRequestWithFile('PUT', `/api/admin/products/${productId}`, productData, token);
+},
+
+// Add the token parameter to the delete function
+deleteAdminProduct: (productId: string, token: string | null) => {
+  // Note the 'null' argument because DELETE requests typically don't have a body
+  return apiRequest('DELETE', `/api/admin/products/${productId}`, null, token);
+},
 
 };

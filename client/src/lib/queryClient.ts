@@ -14,6 +14,31 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+export const apiRequestWithFile = async (method: string, url: string, formData: FormData, token?: string | null) => {
+  const headers: HeadersInit = {}; // Start with an empty headers object
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  // IMPORTANT: DO NOT set 'Content-Type': 'application/json'.
+  // The browser will automatically set it to 'multipart/form-data' with the correct boundary.
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    // IMPORTANT: DO NOT JSON.stringify the formData. Pass it directly.
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(errorData.message || 'An unknown API error occurred');
+  }
+  
+  return response.json();
+};
+
 export async function apiRequest(
   method: string,
   url: string,

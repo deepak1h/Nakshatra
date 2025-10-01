@@ -226,7 +226,7 @@ export default function CelestialStore() {
         {/* Load Products Button for Demo */}
         {!isLoading && products.length === 0 && (
           <div className="text-center">
-            <Button 
+            {/* <Button 
               onClick={() => {
                 fetch("/api/seed-products", { method: "POST" })
                   .then(() => {
@@ -248,7 +248,7 @@ export default function CelestialStore() {
               data-testid="button-seed-products"
             >
               Load Sample Products
-            </Button>
+            </Button> */}
           </div>
         )}
       </div>

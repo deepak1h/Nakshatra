@@ -17,9 +17,8 @@ import {
   changePasswordSchema,
   type User
 } from "@shared/schema";
-import { z } from "zod";
+import multer from 'multer';
 import bcrypt from "bcrypt";
-import { v4 as uuidv4 } from "uuid";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import {supabaseAdmin} from "./supabaseAdminClient";
@@ -31,6 +30,8 @@ const sessionStore = new pgStore({
   createTableIfMissing: true,
   ttl: 7 * 24 * 60 * 60, // 7 days
 });
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Authentication middleware
 declare global {
@@ -351,9 +352,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Admin Products API
-  app.post("/api/admin/products", requireAdmin, async (req, res) => {
+  app.get("/api/admin/products", requireAdmin, async (req, res) => {
     try {
-      const productData = insertProductSchema.parse(req.body);
+      // This calls the function you already have in storage.ts
+      const allProducts = await storage.getAllAdminProducts(); 
+      res.json(allProducts); // Send the products back as a JSON response
+      console.log("Fetched all admin products, count:", allProducts.length);
+    } catch (error) {
+      console.error("Error fetching all admin products:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.post("/api/admin/products", requireAdmin, upload.array('images', 10), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      const imageUrls: string[] = [];
+
+      // 1. Upload images to Supabase Storage
+      if (files) {
+        for (const file of files) {
+          const filePath = `products/${Date.now()}-${file.originalname}`;
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from('product-images') // Make sure you have a bucket named 'product-images' in Supabase
+            .upload(filePath, file.buffer, { contentType: file.mimetype });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabaseAdmin.storage.from('product-images').getPublicUrl(filePath);
+          imageUrls.push(publicUrl);
+        }
+      }
+
+      // 2. Parse other form data
+      const productData = {
+        ...req.body,
+        stock: parseInt(req.body.stock, 10)||0,
+        isActive: req.body.isActive === 'true',
+        specifications: JSON.parse(req.body.specifications || '[]'),
+        imageUrls,
+      };
+
       const product = await storage.createProduct(productData);
       res.json(product);
     } catch (error) {
@@ -362,13 +401,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
+  // --- REPLACE your old PUT route ---
+  app.put("/api/admin/products/:id", requireAdmin, upload.array('images', 10), async (req, res) => {
     try {
-      const productData = updateProductSchema.parse(req.body);
-      const product = await storage.updateProduct(req.params.id, productData);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
+      const files = req.files as Express.Multer.File[];
+      let imageUrls: string[] = JSON.parse(req.body.existingImageUrls || '[]');
+
+      // 1. Upload NEW images
+      if (files) {
+        for (const file of files) {
+          const filePath = `products/${Date.now()}-${file.originalname}`;
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from('product-images')
+            .upload(filePath, file.buffer, { contentType: file.mimetype });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabaseAdmin.storage.from('product-images').getPublicUrl(filePath);
+          imageUrls.push(publicUrl);
+        }
       }
+
+      // 2. Parse other form data
+      const productData = {
+        ...req.body,
+        stock: parseInt(req.body.stock, 10) || 0,
+        isActive: req.body.isActive === 'true',
+        specifications: JSON.parse(req.body.specifications || '[]'),
+        imageUrls,
+      };
+
+      console.log("Updating product with data:", productData);
+
+      const product = await storage.updateProduct(req.params.id, productData);
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -430,17 +495,6 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
   });
 
 
-  // Orders API
-  // app.post("/api/orders", async (req, res) => {
-  //   try {
-  //     const orderData = insertOrderSchema.parse(req.body);
-  //     const order = await storage.createOrder(orderData);
-  //     res.json(order);
-  //   } catch (error) {
-  //     console.error("Error creating order:", error);
-  //     res.status(500).json({ message: "Failed to create order" });
-  //   }
-  // });
   app.post("/api/orders", requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;

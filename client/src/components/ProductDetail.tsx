@@ -1,28 +1,26 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Shield, RotateCcw } from "lucide-react";
-import { Card, CardContent } from "./ui/card";
+import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Shield, RotateCcw, Minus, Plus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
+import { Separator } from "./ui/separator";
+import { api } from "../lib/api"; 
 
 interface Product {
   id: string;
   name: string;
   description: string;
   price: string;
+  discountedPrice?: string | null;
   category: string;
-  imageUrl?: string;
+  imageUrls?: string[] | null;
   stock: number;
   isActive: boolean;
-  rating?: number;
-  reviews?: number;
-  features?: string[];
-  materials?: string[];
-  dimensions?: string;
-  weight?: string;
+  specifications?: { key: string; value: string }[] | null;
 }
 
 export default function ProductDetail() {
@@ -33,26 +31,24 @@ export default function ProductDetail() {
   const { toast } = useToast();
 
   const { data: product, isLoading, error } = useQuery<Product>({
-    queryKey: [`/api/products/${id}`],
+    queryKey: ["product", id],
+    queryFn: () => api.getProduct(id!), // Assuming api.getProduct(id) fetches from /api/products/:id
     enabled: !!id,
   });
 
-  // Sample additional images for demonstration
-  const productImages = product?.imageUrl ? [
-    product.imageUrl,
-    product.imageUrl.replace('photo-1602173574767', 'photo-1589656966895'), // Different angle
-    product.imageUrl.replace('photo-1602173574767', 'photo-1544947950-fa07a98d237f'), // Close-up
-    product.imageUrl.replace('photo-1602173574767', 'photo-1518837695005'), // Lifestyle
-  ] : [];
 
-  const handleAddToCart = () => {
+
+const handleAddToCart = () => {
     if (!product) return;
     
+    // Use the discounted price for the cart if it exists
+    const finalPrice = parseFloat(product.discountedPrice || product.price);
+
     addToCart({
       id: product.id,
       name: product.name,
-      price: parseFloat(product.price),
-      imageUrl: product.imageUrl || "",
+      price: finalPrice,
+      imageUrl: product.imageUrls?.[0] || "",
       quantity,
     });
 
@@ -62,12 +58,14 @@ export default function ProductDetail() {
     });
   };
 
+
   const handleQuantityChange = (change: number) => {
     const newQuantity = quantity + change;
     if (newQuantity >= 1 && newQuantity <= (product?.stock || 0)) {
       setQuantity(newQuantity);
     }
   };
+
 
   if (isLoading) {
     return (
@@ -116,6 +114,11 @@ export default function ProductDetail() {
     );
   }
 
+  const productImages = product.imageUrls || [];
+  const hasDiscount = product.discountedPrice && parseFloat(product.discountedPrice) > 0;
+
+
+
   return (
     <div className="min-h-screen bg-cosmic-navy pt-20 px-6">
       <div className="max-w-7xl mx-auto">
@@ -138,144 +141,90 @@ export default function ProductDetail() {
           </nav>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Image Gallery */}
-          <div className="space-y-4">
-            <Card className="border-cosmic-purple/30 overflow-hidden">
-              <div className="aspect-square bg-cosmic-purple/10 flex items-center justify-center">
-                <img
-                  src={productImages[selectedImageIndex] || product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            </Card>
-            
-            {/* Thumbnail Gallery */}
-            <div className="grid grid-cols-4 gap-2">
-              {productImages.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImageIndex(index)}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                    selectedImageIndex === index 
-                      ? "border-cosmic-gold ring-2 ring-cosmic-gold/50" 
-                      : "border-cosmic-purple/30 hover:border-cosmic-purple/60"
-                  }`}
-                >
+         <div className="grid lg:grid-cols-2 gap-12">
+            {/* --- DYNAMIC Image Gallery --- */}
+            <div className="space-y-4">
+              <Card className="overflow-hidden">
+                <div className="aspect-square bg-muted flex items-center justify-center">
                   <img
-                    src={image}
-                    alt={`${product.name} view ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    src={productImages[selectedImageIndex] || "/placeholder.svg"}
+                    alt={product.name}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Product Information */}
-          <div className="space-y-6">
-            <div>
-              <Badge variant="outline" className="mb-4 capitalize">
-                {product.category}
-              </Badge>
-              <h1 className="text-4xl font-serif font-bold text-cosmic-gold mb-4">
-                {product.name}
-              </h1>
-              
-              {/* Rating */}
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-5 h-5 ${
-                        i < (product.rating || 4) 
-                          ? "fill-cosmic-gold text-cosmic-gold" 
-                          : "text-muted-foreground"
-                      }`}
-                    />
-                  ))}
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  ({product.reviews || 127} reviews)
-                </span>
-              </div>
-
-              <p className="text-3xl font-bold text-cosmic-gold mb-6">
-                ₹{parseFloat(product.price).toLocaleString()}
-              </p>
-            </div>
-
-            <div className="prose prose-invert max-w-none">
-              <p className="text-muted-foreground leading-relaxed">
-                {product.description || "This sacred item carries the ancient wisdom of the cosmos, carefully crafted to enhance your spiritual journey and bring positive energies into your life."}
-              </p>
-            </div>
-
-            {/* Features */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-cosmic-gold">Features & Benefits</h3>
-              <ul className="space-y-2">
-                {(product.features || [
-                  "Authentic spiritual energy",
-                  "Handcrafted with cosmic precision",
-                  "Blessed by ancient rituals",
-                  "Suitable for meditation and healing"
-                ]).map((feature, index) => (
-                  <li key={index} className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-1.5 h-1.5 bg-cosmic-gold rounded-full"></div>
-                    {feature}
-                  </li>
+              </Card>
+              <div className="grid grid-cols-5 gap-2">
+                {productImages.map((image, index) => (
+                  <button key={index} onClick={() => setSelectedImageIndex(index)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${selectedImageIndex === index ? "border-primary ring-2 ring-primary/50" : "border-transparent hover:border-muted-foreground"}`}
+                  >
+                    <img src={image} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
+                  </button>
                 ))}
-              </ul>
+              </div>
             </div>
 
-            {/* Quantity and Add to Cart */}
-            <Card className="border-cosmic-purple/30 bg-cosmic-purple/5">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium">Quantity:</span>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleQuantityChange(-1)}
-                      disabled={quantity <= 1}
-                    >
-                      -
-                    </Button>
-                    <span className="w-12 text-center font-medium">{quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleQuantityChange(1)}
-                      disabled={quantity >= product.stock}
-                    >
-                      +
-                    </Button>
+
+            {/* --- DYNAMIC Product Information --- */}
+            <div className="space-y-6">
+              <div>
+                <Badge variant="outline" className="mb-4 capitalize">{product.category}</Badge>
+                <h1 className="text-4xl font-bold mb-4">{product.name}</h1>
+                <p className="text-muted-foreground leading-relaxed mb-6">{product.description}</p>
+              </div>
+              
+              {/* --- DYNAMIC Price Display --- */}
+              <div className="flex items-baseline gap-4">
+                <p className={`text-4xl font-bold ${hasDiscount ? 'text-red-500' : 'text-primary'}`}>
+                  ₹{parseFloat(hasDiscount ? product.discountedPrice! : product.price).toLocaleString()}
+                </p>
+                {hasDiscount && (
+                  <p className="text-2xl text-muted-foreground line-through">
+                    ₹{parseFloat(product.price).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <Separator />
+              
+              {/* --- DYNAMIC Specifications Table --- */}
+              {product.specifications && product.specifications.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Specifications</h3>
+                  <div className="space-y-2">
+                    {product.specifications.map(spec => (
+                      spec.key && <div key={spec.key} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{spec.key}:</span>
+                        <span>{spec.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              )}
 
+
+            {/* Quantity and Add to Cart */}
+            <Card className="bg-muted/50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-medium">Quantity:</span>
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1}><Minus className="w-4 h-4" /></Button>
+                    <span className="w-12 text-center font-bold text-lg">{quantity}</span>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(1)} disabled={quantity >= product.stock}><Plus className="w-4 h-4" /></Button>
+                  </div>
+                </div>
                 <div className="flex gap-3">
-                  <Button 
-                    onClick={handleAddToCart}
-                    className="flex-1 cosmic-glow"
-                    disabled={product.stock === 0}
-                  >
+                  <Button onClick={handleAddToCart} className="flex-1" disabled={product.stock === 0}>
                     <ShoppingCart className="w-4 h-4 mr-2" />
                     {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
                   </Button>
-                  <Button variant="outline" size="icon">
-                    <Heart className="w-4 h-4" />
-                  </Button>
+                  <Button variant="outline" size="icon"><Heart className="w-4 h-4" /></Button>
                 </div>
-
-                <div className="text-sm text-muted-foreground mt-3">
+                <div className="text-sm text-center mt-3">
                   {product.stock > 0 ? (
-                    <span className="text-green-400">✓ {product.stock} items in stock</span>
+                    <span className={`font-medium ${product.stock < 10 ? 'text-orange-500' : 'text-green-600'}`}>✓ {product.stock} units available</span>
                   ) : (
-                    <span className="text-red-400">✗ Currently out of stock</span>
+                    <span className="font-medium text-red-500">✗ Out of stock</span>
                   )}
                 </div>
               </CardContent>
@@ -302,32 +251,6 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Product Details */}
-        <div className="mt-16 grid md:grid-cols-2 gap-8">
-          <Card className="border-cosmic-purple/30">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-semibold mb-4 text-cosmic-gold">Product Details</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Category:</span>
-                  <span className="capitalize">{product.category}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Materials:</span>
-                  <span>{product.materials?.join(", ") || "Sacred materials"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Dimensions:</span>
-                  <span>{product.dimensions || "Standard size"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Weight:</span>
-                  <span>{product.weight || "Lightweight"}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="border-cosmic-purple/30">
             <CardContent className="p-6">
               <h3 className="text-xl font-semibold mb-4 text-cosmic-gold">Spiritual Guidance</h3>
@@ -342,6 +265,5 @@ export default function ProductDetail() {
           </Card>
         </div>
       </div>
-    </div>
   );
 }

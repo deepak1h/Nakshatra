@@ -137,6 +137,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(products).where(eq(products.isActive, true));
   }
 
+   async getAllAdminProducts(): Promise<Product[]> {
+    return await db.select().from(products).orderBy(desc(products.createdAt));
+  }
+
   async getProductsByCategory(category: string): Promise<Product[]> {
     return await db
       .select()

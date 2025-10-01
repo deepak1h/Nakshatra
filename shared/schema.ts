@@ -39,10 +39,12 @@ export const products = pgTable("products", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  category: varchar("category", { length: 100 }).notNull(),
-  imageUrl: varchar("image_url", { length: 500 }),
+  category: text("category").notNull(),
+  imageUrls: text("image_urls").array(),
   stock: integer("stock").default(0),
   isActive: boolean("is_active").default(true),
+  discountedPrice: text("discounted_price"), // Can be null
+  specifications: jsonb("specifications"),   // Stores { "Color": "Red", "Size": "M"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
