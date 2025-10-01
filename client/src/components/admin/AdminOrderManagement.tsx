@@ -71,30 +71,24 @@ export default function AdminOrderManagement() {
   const { toast } = useToast();
 
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
-    queryKey: ["adminOrders"],
-
-        queryFn: getAdminQueryFn(session?.access_token ?? null),
-
-        enabled: !!session?.access_token,
+    queryKey: ["adminOrders"], // Key for caching
+    queryFn: () => api.getAdminOrders(session?.access_token ?? null),
+    enabled: !!session?.access_token,
   });
 
+
   const { data: orderDetails, isFetching: isFetchingDetails } = useQuery<OrderWithDetails>({
-    // CHANGED: The query key should reflect the specific order ID
-    queryKey: ["adminOrderDetails", viewingOrder?.id], 
-    // CHANGED: Use the getAdminQueryFn here as well
-    queryFn: getAdminQueryFn(session?.access_token ?? null),
-    // CHANGED: Use the declarative `enabled` pattern. This query will automatically run
-    // when `viewingOrder` is set to an object, and won't run if it's null.
+    queryKey: ["adminOrderDetails", viewingOrder?.id], // Key for caching
+    queryFn: () => api.getAdminOrderById(viewingOrder!.id, session?.access_token ?? null),
     enabled: !!viewingOrder?.id && !!session?.access_token,
   });
 
   const updateOrderMutation = useMutation({
-    // CHANGED: Pass the access token to the api function
-    mutationFn: ({ orderId, data }: { orderId: string, data: any }) => 
+
+    mutationFn: ({ orderId, data }: { orderId: string, data: any }) =>
       api.updateAdminOrder(orderId, data, session?.access_token ?? null),
     onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: ["adminOrders"] });
-      // Also update the specific order details if it's being viewed
       queryClient.invalidateQueries({ queryKey: ["adminOrderDetails", updatedOrder.id] });
       toast({ title: "Order Updated Successfully!" });
       setEditingOrder(null);

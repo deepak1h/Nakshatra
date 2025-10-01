@@ -12,9 +12,6 @@ import AdminPage from "@/components/admin/AdminPage";
 import ProductDetail from "@/components/ProductDetail";
 import NotFound from "@/pages/not-found";
 import Checkout from "@/pages/Checkout";
-import ProductDetail from "@/components/ProductDetail";
-import { AdminProvider } from "@/hooks/useAdmin";
-import AdminPage from "@/components/admin/AdminPage";
 
 function Router() {
   return (

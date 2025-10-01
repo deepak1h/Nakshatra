@@ -87,11 +87,12 @@ export const api = {
 
   // Admin
   getAdminOrderById: (orderId: string, token: string | null) => {
-    return apiRequest('GET', `/api/admin/orders/${orderId}`, token);
+    return apiRequest('GET', `/api/admin/orders/${orderId}`,null, token);
   },
 
   getAdminOrders: (token: string | null) => {
-    return apiRequest('GET', '/api/admin/orders',token);
+    console.log("Fetching admin orders with token:", token);
+    return apiRequest('GET', '/api/admin/orders',null ,token);
   },
 
   updateAdminOrder: (orderId: string, data: any, token: string | null) => {
