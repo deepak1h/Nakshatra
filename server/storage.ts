@@ -34,7 +34,7 @@ import {
   type InsertUserSession,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, lt, gte } from "drizzle-orm";
+import {sql, eq, count, sum, desc, and, lt, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -99,6 +99,7 @@ export interface IStorage {
 
   // Admin operations (if any)
   getOrderById(orderId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined>;
+
 }
 
 export class DatabaseStorage implements IStorage {
@@ -301,7 +302,7 @@ export class DatabaseStorage implements IStorage {
         description: products.description,
         price: products.price,
         category: products.category,
-        imageUrl: products.imageUrl,
+        imageUrl: products.imageUrls,
         stock: products.stock,
         isActive: products.isActive,
         createdAt: products.createdAt,
@@ -371,7 +372,7 @@ export class DatabaseStorage implements IStorage {
           description: products.description,
           price: products.price,
           category: products.category,
-          imageUrl: products.imageUrl,
+          imageUrl: products.imageUrls,
           stock: products.stock,
           isActive: products.isActive,
           createdAt: products.createdAt,
@@ -504,6 +505,69 @@ export class DatabaseStorage implements IStorage {
         ...item.order_items,
         product: item.products
       }))
+    };
+  }
+
+  async getDashboardOverview() {
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // We use Promise.all to run all these database queries in parallel for maximum speed.
+    const [
+      totalProducts,
+      newOrders,
+      kundaliRequestsCount,
+      totalUsers,
+      monthlyRevenueResult,
+      recentOrders,
+      topProducts,
+      // You would add a topProducts query here if needed
+    ] = await Promise.all([
+      db.select({ value: count() }).from(products),
+      db.select({ value: count() }).from(orders).where(eq(orders.status, 'new')), // Example: "Active" means "new"
+      db.select({ value: count() }).from(kundaliRequests),
+      db.select({ value: count() }).from(users),
+      db.select({ total: sum(sql<number>`CAST(${orders.totalAmount} AS numeric)`) })
+        .from(orders)
+        .where(and(
+          eq(orders.status, 'Delivered'), // Only count Delivered orders
+          gte(orders.createdAt, startOfMonth) // Only from the current month
+        )),
+        
+      db.select().from(orders).orderBy(desc(orders.createdAt)).limit(5),
+
+      // --- NEW: Top 3 Products by Revenue Query ---
+      db.select({
+          name: products.name,
+          totalRevenue: sum(sql<number>`CAST(${orderItems.price} AS numeric) * ${orderItems.quantity}`)
+        })
+        .from(orderItems)
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .groupBy(products.name)
+        .orderBy(desc(sum(sql<number>`CAST(${orderItems.price} AS numeric) * ${orderItems.quantity}`)))
+        .limit(3),
+    ]);
+
+    console.log("Dashboard Data:", {
+      totalProducts,
+      newOrders,
+      kundaliRequests: kundaliRequestsCount,
+      totalUsers,
+      monthlyRevenue: monthlyRevenueResult[0].total,
+      recentOrders,
+      topProducts,
+    });
+    
+    // Drizzle returns arrays for aggregates, so we extract the first value.
+    return {
+      totalProducts: totalProducts[0].value,
+      newOrders: newOrders[0].value,
+      kundaliRequests: kundaliRequestsCount[0].value,
+      totalUsers: totalUsers[0].value,
+      monthlyRevenue: parseFloat(monthlyRevenueResult[0].total || '0').toFixed(2), // Handle potential null
+      recentOrders,
+      topProducts: topProducts.map(p => ({ ...p, totalRevenue: parseFloat(p.totalRevenue || '0').toFixed(2) })),
+      // topProducts would be returned here
     };
   }
 

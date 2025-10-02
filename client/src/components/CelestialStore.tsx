@@ -39,7 +39,7 @@ export default function CelestialStore() {
     queryFn: api.getLikedProducts, // Use the new function here
     enabled: !!user,
   });
-  const likedProductIds = new Set(likedProducts.map((p) => p.id));
+  const likedProductIds = new Set((likedProducts || []).map((p) => p.id));
 
 
    const likeMutation = useMutation({

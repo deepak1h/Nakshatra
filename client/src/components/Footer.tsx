@@ -159,7 +159,7 @@ export default function Footer() {
                 </button>
               </li>
               <li><a href="#" className="hover:text-accent transition-colors" data-testid="footer-faq">FAQ</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors" data-testid="footer-shipping">Shipping Info</a></li>
+              <li><a href="/admin" className="hover:text-accent transition-colors" data-testid="footer-admin-portal">Admin Portal</a></li>
               <li><a href="#" className="hover:text-accent transition-colors" data-testid="footer-returns">Returns</a></li>
               <li><a href="#" className="hover:text-accent transition-colors" data-testid="footer-privacy">Privacy Policy</a></li>
               <li><a href="#" className="hover:text-accent transition-colors" data-testid="footer-terms">Terms of Service</a></li>

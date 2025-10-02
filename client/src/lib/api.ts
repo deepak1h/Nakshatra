@@ -121,4 +121,11 @@ deleteAdminProduct: (productId: string, token: string | null) => {
   return apiRequest('DELETE', `/api/admin/products/${productId}`, null, token);
 },
 
+// New function to get dashboard stats
+
+  getAdminDashboardStats: (token: string | null) => {
+    return apiRequest('GET', '/api/admin/dashboard-stats', null, token);
+  },
+
+
 };

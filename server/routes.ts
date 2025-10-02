@@ -213,10 +213,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Admin Authentication
-
-  // --- REPLACEMENT for Admin Authentication ---
-
-  // New requireAdmin middleware
   async function requireAdmin(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -245,7 +241,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Admin authentication error" });
     }
   }
-
   // NEW Admin Login route
   app.post("/api/admin/login", async (req, res) => {
     try {
@@ -288,7 +283,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
   // NEW Admin Logout route
   app.post("/api/admin/logout", requireAdmin, async (req, res) => {
     try {
@@ -308,7 +302,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
   // NEW Admin "me" route
   app.get("/api/admin/me", requireAdmin, async (req, res) => {
     // The user object is attached by the requireAdmin middleware
@@ -321,7 +314,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } 
     });
   });
-
 
   // Products API
   app.get("/api/products", async (req, res) => {
@@ -349,7 +341,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch product" });
     }
   });
-
 
   // Admin Products API
   app.get("/api/admin/products", requireAdmin, async (req, res) => {
@@ -948,6 +939,17 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
     } catch (error) {
       console.error("Error seeding promotional banners:", error);
       res.status(500).json({ message: "Failed to seed promotional banners" });
+    }
+  });
+
+  app.get("/api/admin/dashboard-stats", requireAdmin, async (req, res) => {
+    try {
+      console.log("Fetching dashboard stats...");
+      const stats = await storage.getDashboardOverview();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
 

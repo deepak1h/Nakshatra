@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAdmin } from "@/hooks/useAdmin";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
@@ -14,6 +13,7 @@ import {
   Settings 
 } from "lucide-react";
 import { Link } from "wouter";
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface AdminDashboardProps {
   activeTab: string;
