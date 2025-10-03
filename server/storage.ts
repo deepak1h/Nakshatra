@@ -34,7 +34,9 @@ import {
   type InsertUserSession,
 } from "@shared/schema";
 import { db } from "./db";
-import {sql, eq, count, sum, desc, and, lt, gte } from "drizzle-orm";
+import {sql, eq, count, sum, desc, and, lt, gte, getTableColumns} from "drizzle-orm";
+
+export type KundaliRequestWithUser = KundaliRequest & { user: { firstName: string | null, lastName: string | null } };
 
 export interface IStorage {
   // User operations
@@ -64,6 +66,7 @@ export interface IStorage {
   createKundaliRequest(request: InsertKundaliRequest): Promise<KundaliRequest>;
   getKundaliRequestsByUser(userId: string): Promise<KundaliRequest[]>;
   updateKundaliStatus(id: string, status: string, reportUrl?: string): Promise<void>;
+  
   
   // Chat operations
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
@@ -99,7 +102,7 @@ export interface IStorage {
 
   // Admin operations (if any)
   getOrderById(orderId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined>;
-
+  getAllKundaliRequests(): Promise<KundaliRequestWithUser[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -240,14 +243,6 @@ export class DatabaseStorage implements IStorage {
       .from(kundaliRequests)
       .where(eq(kundaliRequests.userId, userId))
       .orderBy(desc(kundaliRequests.createdAt));
-  }
-
-  async updateKundaliStatus(id: string, status: string, reportUrl?: string): Promise<void> {
-    const updateData: any = { status };
-    if (reportUrl) {
-      updateData.reportUrl = reportUrl;
-    }
-    await db.update(kundaliRequests).set(updateData).where(eq(kundaliRequests.id, id));
   }
 
   // Chat operations
@@ -570,6 +565,54 @@ export class DatabaseStorage implements IStorage {
       // topProducts would be returned here
     };
   }
+
+  async updateKundaliStatus(id: string, status: string, reportUrl?: string): Promise<void> {
+    const updateData: any = { status };
+    if (reportUrl) {
+      updateData.reportUrl = reportUrl;
+    }
+    await db.update(kundaliRequests).set(updateData).where(eq(kundaliRequests.id, id));
+  }
+
+async getAllKundaliRequests(): Promise<KundaliRequestWithUser[]> {
+  const flatResult = await db
+      .select({
+        // Use a spread operator to get all columns from the main table
+        ...getTableColumns(kundaliRequests),
+        
+        // Use aliases for the fields from the joined table
+        userFirstName: users.firstName,
+        userLastName: users.lastName,
+      })
+      .from(kundaliRequests)
+      .innerJoin(users, eq(kundaliRequests.userId, users.id))
+      .orderBy(desc(kundaliRequests.createdAt));
+
+    // Optional: Log the raw flat result for debugging
+    console.log("--- Fetched FLAT Kundali Requests from DB ---", flatResult);
+
+    // 2. MAP the flat structure into the nested structure you need
+    const result = flatResult.map(req => {
+      // Create the nested user object
+      const user = {
+        firstName: req.userFirstName,
+        lastName: req.userLastName,
+      };
+      
+      // Remove the temporary aliased properties from the main object
+      delete (req as any).userFirstName;
+      delete (req as any).userLastName;
+
+      // Return the final, correctly shaped object
+      return { ...req, user };
+    });
+    
+    // Optional: Log the final shaped result
+    console.log("--- SHAPED Kundali Requests for Frontend ---", result);
+
+    return result;
+  }
+
 
   
 }

@@ -127,5 +127,13 @@ deleteAdminProduct: (productId: string, token: string | null) => {
     return apiRequest('GET', '/api/admin/dashboard-stats', null, token);
   },
 
+   getAdminKundaliRequests: (token: string | null) => {
+    return apiRequest('GET', '/api/admin/kundali-requests', null, token);
+  },
+
+  updateAdminKundaliRequest: (id: string, data: { status: string; reportUrl?: string }, token: string | null) => {
+    return apiRequest('PUT', `/api/admin/kundali-requests/${id}`, data, token);
+  },
+
 
 };

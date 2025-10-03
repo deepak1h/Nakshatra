@@ -953,6 +953,33 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
     }
   });
 
+app.get("/api/admin/kundali-requests", requireAdmin, async (req, res) => {
+    try {
+      const requests = await storage.getAllKundaliRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching kundali requests:", error);
+      res.status(500).json({ message: "Failed to fetch kundali requests" });
+    }
+  });
+
+  app.put("/api/admin/kundali-requests/:id", requireAdmin, async (req, res) => {
+    try {
+      const { status, reportUrl } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      await storage.updateKundaliStatus(req.params.id, status, reportUrl);
+      console.log(`Kundali request ${req.params.id} updated to status: ${status}`);
+      res.json({ message: "Kundali request updated successfully" });
+    } catch (error) {
+      console.error("Error updating kundali request:", error);
+      res.status(500).json({ message: "Failed to update kundali request" });
+    }
+  });
+
+  
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -5,6 +5,7 @@ import AdminDashboard from "./AdminDashboard";
 import AdminOverview from "./AdminOverview";
 import AdminProductManagement from "./AdminProductManagement";
 import AdminOrderManagement from "./AdminOrderManagement";
+import AdminKundaliManagement from "./AdminKundaliManagement";
 
 export default function AdminPage() {
   const { isAuthenticated, isLoading } = useAdmin();
@@ -31,12 +32,7 @@ export default function AdminPage() {
       case "orders":
         return <AdminOrderManagement />;
       case "kundali":
-        return (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Kundali Types Management</h2>
-            <p className="text-muted-foreground">Coming soon...</p>
-          </div>
-        );
+        return <AdminKundaliManagement />;
       case "users":
         return (
           <div className="text-center py-12">
