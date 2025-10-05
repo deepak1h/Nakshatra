@@ -135,5 +135,9 @@ deleteAdminProduct: (productId: string, token: string | null) => {
     return apiRequest('PUT', `/api/admin/kundali-requests/${id}`, data, token);
   },
 
+    getUserAddresses: (token: string | null) => {
+    return apiRequest('GET', '/api/user/addresses', null, token);
+  },
+
 
 };

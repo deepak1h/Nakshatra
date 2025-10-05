@@ -10,6 +10,7 @@ import {
   userCart,
   promotionalBanners,
   userSessions,
+  userAddresses,
   type User,
   type InsertUser,
   type Product,
@@ -32,6 +33,8 @@ import {
   type InsertPromotionalBanner,
   type UserSession,
   type InsertUserSession,
+  type UserAddress,
+  type InsertUserAddress,
 } from "@shared/schema";
 import { db } from "./db";
 import {sql, eq, count, sum, desc, and, lt, gte, getTableColumns} from "drizzle-orm";
@@ -99,6 +102,9 @@ export interface IStorage {
   getUserBySessionToken(sessionToken: string): Promise<User | undefined>;
   deleteUserSession(sessionToken: string): Promise<void>;
   deleteExpiredSessions(): Promise<void>;
+  getUserAddresses(userId: string): Promise<UserAddress[]>;
+  createOrUpdateUserAddress(addressData: InsertUserAddress): Promise<UserAddress>;
+
 
   // Admin operations (if any)
   getOrderById(orderId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined>;
@@ -613,7 +619,25 @@ async getAllKundaliRequests(): Promise<KundaliRequestWithUser[]> {
     return result;
   }
 
+  async getUserAddresses(userId: string): Promise<UserAddress[]> {
+    return await db.select().from(userAddresses).where(eq(userAddresses.userId, userId)).orderBy(desc(userAddresses.createdAt));
+  }
 
+  async createOrUpdateUserAddress(addressData: InsertUserAddress): Promise<UserAddress> {
+    // Check if an identical address already exists to avoid duplicates
+    const [existing] = await db.select().from(userAddresses).where(and(
+      eq(userAddresses.userId, addressData.userId!),
+      eq(userAddresses.addressLine1, addressData.addressLine1),
+      eq(userAddresses.pincode, addressData.pincode)
+    ));
+
+    if (existing) {
+      return existing; // Return the existing address without creating a new one
+    }
+
+    const [newAddress] = await db.insert(userAddresses).values(addressData).returning();
+    return newAddress;
+  }
   
 }
 

@@ -545,6 +545,9 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
 
     // Clear the user's cart (this part is the same)
     await storage.clearUserCart(userId);
+    await storage.createOrUpdateUserAddress({
+      userId, name, mobileNumber, addressLine1, addressLine2, landmark, pincode, city, state, country
+    });
 
     res.status(201).json(newOrder);
   } catch (error) {
@@ -839,7 +842,9 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
   // Order history route
   app.get("/api/user/orders", requireAuth, async (req, res) => {
     try {
-      const orders = await storage.getOrdersByUser(req.user!.id);
+
+      const userId = req.user!.id;
+      const orders = await storage.getOrdersByUser(userId);
       res.json(orders);
     } catch (error) {
       console.error("Error fetching user orders:", error);
@@ -962,6 +967,17 @@ app.get("/api/admin/kundali-requests", requireAdmin, async (req, res) => {
       res.status(500).json({ message: "Failed to fetch kundali requests" });
     }
   });
+
+  app.get("/api/user/addresses", requireAuth, async (req, res) => {
+  try {
+    const addresses = await storage.getUserAddresses(req.user!.id);
+    res.json(addresses);
+  } catch (error) {
+    console.error("Error fetching user addresses:", error);
+    res.status(500).json({ message: "Failed to fetch addresses" });
+  }
+});
+
 
   app.put("/api/admin/kundali-requests/:id", requireAdmin, async (req, res) => {
     try {

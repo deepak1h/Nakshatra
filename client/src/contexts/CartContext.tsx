@@ -6,52 +6,69 @@ import type { Product, UserCart } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl: string;
-  quantity: number;
   productId: string;
+  name: string;
+  price: number;          // The FINAL price the user pays per item
+  originalPrice?: number; // The price before discount
+  imageUrl: string;         // The first image for display
+  quantity: number;
 }
+
+type AddToCartItem = Omit<CartItem, 'quantity'> & { quantity?: number };
 
 interface CartContextType {
   cartItems: CartItem[];
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
-  addToCart: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
-  removeFromCart: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  getCartTotal: ()=> number;
-  clearCart: ()=> void;
+  addToCart: (item: AddToCartItem) => void;
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  getCartTotal: () => number;
+  clearCart: () => void;
+  isUpdatingCart: boolean; // For showing loading states
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const queryClient = useQueryClient();
-  const { toast } = useToast(); // 2. Initialize toast
+  const { toast } = useToast();
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const { data: cartItems = [] } = useQuery<CartItem[]>({
-    queryKey: ["userCart"], // Use a more descriptive query key
-    queryFn: api.getUserCart, // Call the new function
+  // This query fetches the raw cart data from the DB
+  const { data: cartItems = [], isLoading: isCartLoading } = useQuery({
+    queryKey: ["userCart"],
+    queryFn: () => api.getUserCart(),
     enabled: !!user,
-    select: (data: (UserCart & { product: Product })[]) =>
-      data.map((item) => ({
-        id: item.id,
-        productId: item.productId,
-        name: item.product.name,
-        price: parseFloat(item.product.price),
-        imageUrl: item.product.imageUrl || "",
-        quantity: item.quantity,
-      })),
+
+    // --- 2. THE CRITICAL FIX: Data Transformation ---
+    // The `select` function transforms the raw DB data into the CartItem shape our app uses.
+    select: (data: (UserCart & { product: Product })[]): CartItem[] =>
+      data.map((item) => {
+        // Safely parse prices
+        const originalPrice = parseFloat(item.product.price);
+        const discountedPrice = item.product.discountedPrice ? parseFloat(item.product.discountedPrice) : null;
+        
+        // Determine the final price
+        const finalPrice = (discountedPrice && discountedPrice > 0) ? discountedPrice : originalPrice;
+
+        return {
+          productId: item.productId,
+          name: item.product.name,
+          price: finalPrice,
+          originalPrice: originalPrice,
+          // Get the first image from the new `imageUrls` array
+          imageUrl: item.product.imageUrls?.[0] || "/placeholder.svg",
+          quantity: item.quantity,
+        };
+      }),
   });
 
 const addToCartMutation = useMutation({
-    mutationFn: (item: { productId: string; quantity: number; name: string }) =>
-      api.addToCart({ productId: item.productId, quantity: item.quantity }),
-    onSuccess: (data, variables) => {
+    mutationFn: (item: { productId: string; quantity: number }) =>
+      api.addToCart(item),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["userCart"] });
       toast({
         title: "Added to Cart! ✨",
@@ -68,37 +85,25 @@ const addToCartMutation = useMutation({
     },
   });
 
-  // 3. Update the other mutations as well
   const removeFromCartMutation = useMutation({
     mutationFn: (productId: string) => api.removeFromCart(productId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userCart"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userCart"] }),
   });
 
   const updateQuantityMutation = useMutation({
     mutationFn: (item: { productId: string; quantity: number }) => api.updateCartQuantity(item),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userCart"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userCart"] }),
   });
 
   const clearCartMutation = useMutation({
-    mutationFn: api.clearCart,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userCart"] });
-    },
+    mutationFn: () => api.clearCart(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userCart"] }),
   });
 
-
-
-  const addToCart = (item: Omit<CartItem, 'quantity' | 'id'> & { quantity?: number }) => {
+  // --- 3. UPDATED addToCart function signature ---
+  const addToCart = (item: AddToCartItem) => {
     if (!user) {
-      toast({
-        title: "Please log in to add items to cart.",
-        description: "You need to be logged in to add items to your cart.",
-        variant: "destructive",
-      });
+      toast({ title: "Please log in to add items to cart.", variant: "destructive" });
       return;
     }
 
@@ -113,10 +118,10 @@ const addToCartMutation = useMutation({
       addToCartMutation.mutate({
         productId: item.productId,
         quantity: item.quantity || 1,
-        name: item.name,
       });
     }
   };
+  
   const removeFromCart = (productId: string) => {
     if (!user) return;
     removeFromCartMutation.mutate(productId);
@@ -131,25 +136,32 @@ const addToCartMutation = useMutation({
     }
   };
 
-  const getCartTotal = ()=> {
+  const getCartTotal = () => {
     return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const clearCart = ()=> {
+  const clearCart = () => {
     if (!user) return;
     clearCartMutation.mutate();
   };
+
+  const isUpdatingCart = 
+    addToCartMutation.isPending || 
+    removeFromCartMutation.isPending || 
+    updateQuantityMutation.isPending || 
+    clearCartMutation.isPending;
 
   return (
     <CartContext.Provider value={{
       cartItems,
       isCartOpen,
       setIsCartOpen,
-      addToCart: (item) => addToCart(item as any), // Casting to avoid type issues with `id`
+      addToCart,
       removeFromCart,
       updateQuantity,
       getCartTotal,
       clearCart,
+      isUpdatingCart, // Provide loading state to components
     }}>
       {children}
     </CartContext.Provider>
